@@ -775,11 +775,14 @@ function RxBrioUtils.switchToBrio<T>(predicate: Rx.Predicate<T>?)
 
 	return function(source)
 		return Observable.new(function(sub)
-			local topMaid = Maid.new()
+			local brio
 
-			topMaid:GiveTask(source:Subscribe(function(result, ...)
+			local subscription = source:Subscribe(function(result, ...)
 				-- Always kill previous brio first
-				topMaid._last = nil
+				if brio ~= nil then
+					brio:Destroy()
+					brio = nil
+				end
 
 				if Brio.isBrio(result) then
 					if result:IsDead() then
@@ -788,19 +791,24 @@ function RxBrioUtils.switchToBrio<T>(predicate: Rx.Predicate<T>?)
 
 					if predicate == nil or predicate(result:GetValue()) then
 						local newBrio = BrioUtils.clone(result)
-						topMaid._last = newBrio
+						brio = newBrio
 						sub:Fire(newBrio)
 					end
 				else
 					if predicate == nil or predicate(result, ...) then
 						local newBrio = Brio.new(result, ...)
-						topMaid._last = newBrio
+						brio = newBrio
 						sub:Fire(newBrio)
 					end
 				end
-			end, sub:GetFailComplete()))
+			end, sub:GetFailComplete())
 
-			return topMaid
+			return function()
+				subscription:Destroy()
+				if brio ~= nil then
+					brio:Destroy()
+				end
+			end
 		end)
 	end
 end

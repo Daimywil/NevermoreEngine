@@ -49,11 +49,11 @@ function Loader.bootstrapGame(packages)
 		self:_setupLoaderPopulation(self._packages)
 
 		-- Trade off security for performance
-		if RunService:IsStudio() then
-			packages.Parent = ReplicatedStorage
-		else
-			self:_setupClientReplication()
-		end
+		-- if RunService:IsStudio() then
+		-- 	packages.Parent = ReplicatedStorage
+		-- else
+		self:_setupClientReplication()
+		-- end
 	end
 
 	GLOBAL_PACKAGE_TRACKER:AddPackageRoot(packages)

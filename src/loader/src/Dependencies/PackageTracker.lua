@@ -248,14 +248,14 @@ function PackageTracker._trackFolder(
 	local maid = Maid.new()
 
 	maid:GiveTask(child:GetPropertyChangedSignal("Name"):Connect(function()
-		if child.Name == "node_modules" then
+		if child.Name == "node_modules skip" then
 			maid._current = self:_trackMainNodeModuleFolder(child)
 		else
 			maid._current = self:_trackChildrenAndReplicationType(child, ancestorReplicationType)
 		end
 	end))
 
-	if child.Name == "node_modules" then
+	if child.Name == "node_modules skip" then
 		maid._current = self:_trackMainNodeModuleFolder(child)
 	else
 		maid._current = self:_trackChildrenAndReplicationType(child, ancestorReplicationType)
@@ -301,7 +301,11 @@ function PackageTracker._storeModuleScript(
 	assert(ReplicationTypeUtils.isReplicationType(ancestorReplicationType), "Bad ancestorReplicationType")
 
 	if self._packageModuleScriptMap[moduleScriptName] then
-		warn(string.format("[PackageTracker] - Overwriting moduleScript with name %q", moduleScriptName))
+		local original = self._packageModuleScriptMap[moduleScriptName].moduleScript
+		local isOriginalQuenty = original:FindFirstAncestor("@quenty") ~= nil
+		if isOriginalQuenty then
+			return function() end
+		end
 	end
 
 	local data: ModuleScriptInfo = {

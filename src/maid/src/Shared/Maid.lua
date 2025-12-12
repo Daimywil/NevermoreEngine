@@ -148,15 +148,11 @@ function Maid.__newindex(self: Maid, index: any, newTask: MaidTask)
 		elseif typeof(job) == "thread" then
 			local cancelled
 			if coroutine.running() ~= job then
-				cancelled = pcall(function()
-					task.cancel(job)
-				end)
+				cancelled = pcall(task.cancel, job)
 			end
 
 			if not cancelled then
-				task.defer(function()
-					task.cancel(job)
-				end)
+				task.defer(task.cancel, job)
 			end
 		elseif typeof(job) == "RBXScriptConnection" then
 			job:Disconnect()

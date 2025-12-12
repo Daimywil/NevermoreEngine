@@ -9,7 +9,6 @@ local require = require(script.Parent.loader).load(script)
 
 local Brio = require("Brio")
 local DuckTypeUtils = require("DuckTypeUtils")
-local Maid = require("Maid")
 local MaidTaskUtils = require("MaidTaskUtils")
 local Observable = require("Observable")
 local Rx = require("Rx")
@@ -226,21 +225,24 @@ function ValueObject.ObserveBrio<T>(self: ValueObject<T>, condition: Rx.Predicat
 			return
 		end
 
-		local maid = Maid.new()
+		local currentBrio
 
 		local function handleNewValue(newValue: T, ...)
+			if currentBrio ~= nil then
+				currentBrio:Destroy()
+				currentBrio = nil
+			end
+
 			if not condition or condition(newValue) then
 				local brio = Brio.new(newValue, ...)
-				maid._current = brio
+				currentBrio = brio
 				sub:Fire(brio)
-			else
-				maid._current = nil
 			end
 		end
 
-		maid:GiveTask(self.Changed:Connect(function(newValue, _previous, ...)
+		local connection = self.Changed:Connect(function(newValue, _previous, ...)
 			handleNewValue(newValue, ...)
-		end))
+		end)
 
 		local args = rawget(self :: any, "_lastEventContext")
 		if args then
@@ -249,7 +251,12 @@ function ValueObject.ObserveBrio<T>(self: ValueObject<T>, condition: Rx.Predicat
 			handleNewValue(self.Value)
 		end
 
-		return maid
+		return function()
+			connection:Disconnect()
+			if currentBrio ~= nil then
+				currentBrio:Destroy()
+			end
+		end
 	end) :: any
 end
 
