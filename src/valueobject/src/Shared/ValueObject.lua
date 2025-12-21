@@ -45,7 +45,6 @@ export type ValueObject<T> = typeof(setmetatable(
 		Changed: Signal.Signal<(T, T, ...any)>,
 		LastEventContext: { any },
 
-		_checkType: ValueObjectTypeArg?,
 		_value: T,
 		_default: T?,
 		_lastEventContext: { any }?,
@@ -60,34 +59,14 @@ export type ValueObject<T> = typeof(setmetatable(
 	@param checkType string? | (value: T) -> (boolean, string?)
 	@return ValueObject
 ]=]
-function ValueObject.new<T>(baseValue: T?, checkType: ValueObjectTypeArg?): ValueObject<T>
-	local self: ValueObject<T> = setmetatable(
+function ValueObject.new<T>(baseValue: T?): ValueObject<T>
+	return setmetatable(
 		{
 			_value = baseValue,
 			_default = baseValue,
-			_checkType = checkType,
 		} :: any,
 		ValueObject
 	)
-
-	if type(checkType) == "string" then
-		if typeof(baseValue) ~= checkType then
-			error(string.format("Expected value of type %q, got %q instead", checkType, typeof(baseValue)))
-		end
-	elseif type(checkType) == "function" then
-		assert(checkType(baseValue))
-	end
-
-	return self
-end
-
---[=[
-	Returns the current check type, if any
-
-	@return string? | (value: T) -> (boolean, string)
-]=]
-function ValueObject.GetCheckType<T>(self: ValueObject<T>): ValueObjectTypeArg?
-	return rawget(self :: any, "_checkType")
 end
 
 --[=[
@@ -304,15 +283,6 @@ end
 
 function ValueObject._applyValue<T>(self: ValueObject<T>, value: T, ...)
 	local previous = rawget(self :: any, "_value")
-	local checkType = rawget(self :: any, "_checkType")
-
-	if type(checkType) == "string" then
-		if typeof(value) ~= checkType then
-			error(string.format("Expected value of type %q, got %q instead", checkType, typeof(value)))
-		end
-	elseif typeof(checkType) == "function" then
-		assert(checkType(value))
-	end
 
 	if previous ~= value then
 		if select("#", ...) > 0 then
