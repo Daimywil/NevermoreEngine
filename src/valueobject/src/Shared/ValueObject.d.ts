@@ -16,16 +16,16 @@ export interface ValueObjectLike<T> {
   ObserveBrio(predicate: (value: T) => boolean): Observable<Brio<T>>;
 }
 
-// type CheckType =
-//   | keyof CheckableTypes
-//   | ((value: unknown) => LuaTuple<[boolean, string?]>);
+type CheckType =
+  | keyof CheckableTypes
+  | ((value: unknown) => LuaTuple<[boolean, string?]>);
 
 export type Mountable<T> = T | Observable<T> | ValueBase | ValueObject<T>;
 
 export interface ValueObject<T> extends ValueObjectLike<T> {
   Value: T;
   Changed: Signal<LuaTuple<[newValue: T, oldValue: T, ...args: unknown[]]>>;
-  // GetCheckType(): CheckType | undefined;
+  GetCheckType(): CheckType | undefined;
   Mount(value: T | Observable<T>): MaidTask;
   SetValue(value: T): void;
   Destroy(): void;
@@ -34,7 +34,7 @@ export interface ValueObject<T> extends ValueObjectLike<T> {
 interface ValueObjectConstructor {
   readonly ClassName: 'ValueObject';
   new <T = unknown>(): ValueObject<T>;
-  new <T>(value: T): ValueObject<T>;
+  new <T>(value: T, checkType?: CheckType): ValueObject<T>;
 
   fromObservable: <T>(observable: Observable<T>) => ValueObject<T>;
   isValueObject: (value: unknown) => value is ValueObject<unknown>;
