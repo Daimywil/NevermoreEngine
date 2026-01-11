@@ -10,6 +10,7 @@
 local require = require(script.Parent.loader).load(script)
 
 local HttpService = game:GetService("HttpService")
+local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 
 local CmdrTemplateProviderServer = require("CmdrTemplateProviderServer")
@@ -27,6 +28,14 @@ export type CmdrService = typeof(setmetatable(
 		_maid: Maid.Maid,
 		_serviceBag: ServiceBag.ServiceBag,
 		_serviceId: string,
+		_groupId: number?,
+		_playerToGroupRank: { [Player]: number? },
+		_groupCommandPermissions: {
+			{
+				rankInGroupRange: NumberRange,
+				commandGroups: { string },
+			}
+		}?,
 		_promiseCmdr: Promise.Promise<any>,
 		_cmdrTemplateProviderServer: any,
 		_permissionService: PermissionService.PermissionService,
@@ -74,11 +83,35 @@ function CmdrService.Init(self: CmdrService, serviceBag: ServiceBag.ServiceBag)
 	self._definitionData = {}
 	self._executeData = {}
 
-	self._promiseCmdr:Then(function(cmdr)
-		task.spawn(function()
-			cmdr:RegisterDefaultCommands()
-		end)
+	self._playerToGroupRank = {}
+	Players.PlayerAdded:Connect(function(player: Player)
+		task.defer(function()
+			while true do
+				if not player.Parent then
+					break
+				end
 
+				if self._groupId ~= nil then
+					local success, rank = pcall(player.GetRankInGroup, player, self._groupId)
+
+					if success then
+						if player.Parent == nil then
+							break
+						end
+						self._playerToGroupRank[player] = rank
+						break
+					end
+				end
+
+				task.wait(2)
+			end
+		end)
+	end)
+	Players.PlayerRemoving:Connect(function(player: Player)
+		self._playerToGroupRank[player] = nil
+	end)
+
+	self._promiseCmdr:Then(function(cmdr)
 		cmdr.Registry:RegisterHook("BeforeRun", function(context)
 			-- allow!
 			if context.Executor == nil then
@@ -99,12 +132,36 @@ function CmdrService.Init(self: CmdrService, serviceBag: ServiceBag.ServiceBag)
 				end
 			end
 
-			if not provider:IsAdmin(context.Executor) then
-				return "You don't have permission to run this command"
-			else
+			if provider:IsCreator(context.Executor) then
 				-- allow
 				return nil
 			end
+
+			if provider:IsAdmin(context.Executor) then
+				local groupRank = self._playerToGroupRank[context.Executor]
+				if groupRank == nil then
+					-- disallow, but notify they might be able to gain access
+					return "Wait a bit"
+				end
+
+				-- admins have specific permissions
+				if context.Group ~= nil then
+					for _, permissionData in self._groupCommandPermissions or {} do
+						local rankRange = permissionData.rankInGroupRange
+						if groupRank >= rankRange.Min and groupRank <= rankRange.Max then
+							for _, commandGroup in permissionData.commandGroups do
+								if context.Group == commandGroup then
+									-- allow
+									return nil
+								end
+							end
+						end
+					end
+				end
+			end
+
+			-- disallow
+			return "You don't have permission to run this command"
 		end)
 	end)
 
@@ -119,6 +176,38 @@ function CmdrService.PromiseCmdr(self: CmdrService)
 	assert(self._promiseCmdr, "Not initialized")
 
 	return self._promiseCmdr
+end
+
+function CmdrService.RegisterDefaultCommands(self: CmdrService, ...): ()
+	assert((self :: any)._promiseCmdr, "Not initialized")
+
+	local args = { ... }
+
+	self._promiseCmdr:Then(function(cmdr)
+		cmdr:RegisterDefaultCommands(table.unpack(args))
+	end)
+end
+
+function CmdrService.SetGroupCommandPermissions(
+	self: CmdrService,
+	groupId: number,
+	permissions: {
+		{
+			rankInGroupRange: NumberRange,
+			commandGroups: { string },
+		}
+	}
+): ()
+	assert((self :: any)._promiseCmdr, "Not initialized")
+	assert(type(groupId) == "number", "Bad groupId")
+	assert(type(permissions) == "table", "Bad permissions")
+
+	if self._groupCommandPermissions ~= nil then
+		error("Group command permissions have already been set")
+	end
+
+	self._groupId = groupId
+	self._groupCommandPermissions = permissions
 end
 
 --[=[

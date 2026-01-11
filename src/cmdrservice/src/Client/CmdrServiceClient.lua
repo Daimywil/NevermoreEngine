@@ -108,11 +108,11 @@ function CmdrServiceClient:_setBindings(cmdr)
 		end
 	end))
 
-	-- Race condition
-	task.defer(function()
-		-- Default blink for debugging purposes
-		cmdr.Dispatcher:Run("bind", Enum.KeyCode.G.Name, "blink")
-	end)
+	-- -- Race condition
+	-- task.defer(function()
+	-- 	-- Default blink for debugging purposes
+	-- 	cmdr.Dispatcher:Run("bind", Enum.KeyCode.G.Name, "blink")
+	-- end)
 end
 
 --[=[

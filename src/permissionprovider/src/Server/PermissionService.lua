@@ -75,6 +75,18 @@ function PermissionService.SetProviderFromConfig(
 	end
 end
 
+function PermissionService.GetGroupProviderConfig(self: PermissionService): PermissionProviderUtils.GroupRankConfig?
+	if not self._provider then
+		return nil
+	end
+
+	if self._provider.ClassName ~= "GroupPermissionProvider" then
+		return nil
+	end
+
+	return self._provider._config
+end
+
 --[=[
 	Starts the permission service. Should be done via [ServiceBag].
 ]=]
