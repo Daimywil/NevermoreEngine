@@ -1487,7 +1487,7 @@ function Rx.combineLatest<K, V>(observables: Map<K, Observable.Observable<V> | V
 		end
 
 		local pending = unset
-		local maid = Maid.new()
+		local subscriptions = {}
 
 		local function failOnFirst(...)
 			pending -= 1
@@ -1508,20 +1508,27 @@ function Rx.combineLatest<K, V>(observables: Map<K, Observable.Observable<V> | V
 				continue
 			end
 
-			maid:GiveTask(observer:Subscribe(function(value)
-				if latest[key] == UNSET_VALUE then
-					unset -= 1
-				end
+			table.insert(
+				subscriptions,
+				observer:Subscribe(function(value)
+					if latest[key] == UNSET_VALUE then
+						unset -= 1
+					end
 
-				latest[key] = value
+					latest[key] = value
 
-				if unset == 0 then
-					sub:Fire(table.freeze(table.clone(latest)))
-				end
-			end, failOnFirst, completeOnAllPendingDone))
+					if unset == 0 then
+						sub:Fire(table.freeze(table.clone(latest)))
+					end
+				end, failOnFirst, completeOnAllPendingDone)
+			)
 		end
 
-		return maid
+		return function()
+			for _, subscription in subscriptions do
+				subscription:Destroy()
+			end
+		end
 	end) :: any
 end
 
@@ -1811,11 +1818,9 @@ function Rx.timer(initialDelaySeconds: number, seconds: number)
 	assert(type(seconds) == "number", "Bad seconds")
 
 	return Observable.new(function(sub)
-		local maid = Maid.new()
-
 		local number = -1
 
-		maid:GiveTask(task.spawn(function()
+		return task.spawn(function()
 			if initialDelaySeconds and initialDelaySeconds > 0 then
 				task.wait(initialDelaySeconds)
 			end
@@ -1825,9 +1830,7 @@ function Rx.timer(initialDelaySeconds: number, seconds: number)
 				sub:Fire(number)
 				task.wait(seconds)
 			end
-		end))
-
-		return maid
+		end)
 	end)
 end
 
