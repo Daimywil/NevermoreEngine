@@ -1469,12 +1469,14 @@ function Rx.combineLatest<K, V>(observables: Map<K, Observable.Observable<V> | V
 	return Observable.new(function(sub)
 		local unset = 0
 		local latest: Map<K, V> = {}
+		local totalObservables = 0
 
 		-- Instead of caching this, use extra compute here
 		for key, value in observables do
 			if Observable.isObservable(value) then
 				unset += 1
 				latest[key] = UNSET_VALUE
+				totalObservables += 1
 			else
 				latest[key] = value :: V
 			end
@@ -1487,7 +1489,7 @@ function Rx.combineLatest<K, V>(observables: Map<K, Observable.Observable<V> | V
 		end
 
 		local pending = unset
-		local subscriptions = {}
+		local subscriptions = table.create(totalObservables)
 
 		local function failOnFirst(...)
 			pending -= 1
