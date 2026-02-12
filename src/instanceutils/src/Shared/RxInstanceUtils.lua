@@ -158,7 +158,7 @@ function RxInstanceUtils.observePropertyBrio(
 	assert(type(predicate) == "function" or predicate == nil, "Bad predicate")
 
 	return Observable.new(function(sub)
-		local maid = Maid.new()
+		local lastBrio
 		local lastValue = UNSET_VALUE
 
 		local function handlePropertyChanged()
@@ -172,23 +172,34 @@ function RxInstanceUtils.observePropertyBrio(
 
 				if not predicate or predicate(propertyValue) then
 					local brio = Brio.new((instance :: any)[propertyName])
-
-					maid._lastBrio = brio
+					-- we do this assigning to mimic the old maid's behavior where it first sets the value and then destroys the old one
+					local oldBrio = lastBrio
+					lastBrio = brio
+					if oldBrio then
+						oldBrio:Destroy()
+					end
 
 					-- The above line can cause us to be overwritten so make sure before firing.
-					if maid._lastBrio == brio then
+					if lastBrio == brio then
 						sub:Fire(brio)
 					end
-				else
-					maid._lastBrio = nil
+				elseif lastBrio then
+					lastBrio:Destroy()
+					lastBrio = nil
 				end
 			end
 		end
 
-		maid:GiveTask(instance:GetPropertyChangedSignal(propertyName):Connect(handlePropertyChanged))
+		local connection = instance:GetPropertyChangedSignal(propertyName):Connect(handlePropertyChanged)
+
 		handlePropertyChanged()
 
-		return maid
+		return function()
+			connection:Disconnect()
+			if lastBrio then
+				lastBrio:Destroy()
+			end
+		end
 	end) :: any
 end
 
@@ -398,7 +409,6 @@ function RxInstanceUtils.observeDescendants(
 	assert(type(predicate) == "function" or predicate == nil, "Bad predicate")
 
 	return Observable.new(function(sub)
-		local maid = Maid.new()
 		local added = {}
 
 		local function handleDescendant(child)
@@ -408,19 +418,22 @@ function RxInstanceUtils.observeDescendants(
 			end
 		end
 
-		maid:GiveTask(parent.DescendantAdded:Connect(handleDescendant))
-		maid:GiveTask(parent.DescendantRemoving:Connect(function(child)
+		local addedConnection = parent.DescendantAdded:Connect(handleDescendant)
+		local removingConnection = parent.DescendantRemoving:Connect(function(child)
 			if added[child] then
 				added[child] = nil
 				sub:Fire(child, false)
 			end
-		end))
+		end)
 
 		for _, descendant in parent:GetDescendants() do
 			handleDescendant(descendant)
 		end
 
-		return maid
+		return function()
+			addedConnection:Disconnect()
+			removingConnection:Disconnect()
+		end
 	end) :: any
 end
 
@@ -439,26 +452,37 @@ function RxInstanceUtils.observeDescendantsBrio(
 	assert(type(predicate) == "function" or predicate == nil, "Bad predicate")
 
 	return Observable.new(function(sub)
-		local maid = Maid.new()
+		local brios = {}
 
 		local function handleDescendant(descendant)
 			if not predicate or predicate(descendant) then
 				local value = Brio.new(descendant)
-				maid[descendant] = value
+				brios[descendant] = value
 				sub:Fire(value)
 			end
 		end
 
-		maid:GiveTask(parent.DescendantAdded:Connect(handleDescendant))
-		maid:GiveTask(parent.DescendantRemoving:Connect(function(descendant)
-			maid[descendant] = nil
-		end))
+		local addedConnection = parent.DescendantAdded:Connect(handleDescendant)
+		local removingConnection = parent.DescendantRemoving:Connect(function(descendant)
+			local brio = brios[descendant]
+			if brio then
+				brio:Destroy()
+				brios[descendant] = nil
+			end
+		end)
 
 		for _, descendant in parent:GetDescendants() do
 			handleDescendant(descendant)
 		end
 
-		return maid
+		return function()
+			addedConnection:Disconnect()
+			removingConnection:Disconnect()
+
+			for _, brio in brios do
+				brio:Destroy()
+			end
+		end
 	end) :: any
 end
 

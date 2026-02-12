@@ -139,7 +139,7 @@ function RxAttributeUtils.observeAttributeBrio<T>(
 	assert(type(attributeName) == "string", "Bad attributeName")
 
 	return Observable.new(function(sub)
-		local maid = Maid.new()
+		local lastBrio
 		local lastValue = UNSET_VALUE
 
 		local function handleAttributeChanged()
@@ -153,22 +153,34 @@ function RxAttributeUtils.observeAttributeBrio<T>(
 
 				if not condition or condition(attributeValue :: T) then
 					local brio = Brio.new(attributeValue)
-					maid._lastBrio = brio
+					-- we do this assigning to mimic the old maid's behavior where it first sets the value and then destroys the old one
+					local oldBrio = lastBrio
+					lastBrio = brio
+					if oldBrio then
+						oldBrio:Destroy()
+					end
 
 					-- The above line can cause us to be overwritten so make sure before firing.
-					if maid._lastBrio == brio then
+					if lastBrio == brio then
 						sub:Fire(brio)
 					end
-				else
-					maid._lastBrio = nil
+				elseif lastBrio then
+					lastBrio:Destroy()
+					lastBrio = nil
 				end
 			end
 		end
 
-		maid:GiveTask(instance:GetAttributeChangedSignal(attributeName):Connect(handleAttributeChanged))
+		local connection = instance:GetAttributeChangedSignal(attributeName):Connect(handleAttributeChanged)
+
 		handleAttributeChanged()
 
-		return maid
+		return function()
+			connection:Disconnect()
+			if lastBrio then
+				lastBrio:Destroy()
+			end
+		end
 	end) :: any
 end
 
