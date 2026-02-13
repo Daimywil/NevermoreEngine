@@ -8,6 +8,8 @@ local RunService = game:GetService("RunService")
 
 local ReplicationType = require(script.Parent.ReplicationType)
 
+local IS_PLUGIN = script:GetAttribute("IS_PLUGIN") == true
+
 local ReplicationTypeUtils = {}
 
 --[=[
@@ -41,7 +43,7 @@ function ReplicationTypeUtils.getFolderReplicationType(
 end
 
 function ReplicationTypeUtils.inferReplicationType(): ReplicationType.ReplicationType
-	if (not RunService:IsRunning()) and RunService:IsStudio() then
+	if ((not RunService:IsRunning()) and RunService:IsStudio()) or IS_PLUGIN then
 		return ReplicationType.PLUGIN
 	elseif RunService:IsServer() then
 		return ReplicationType.SERVER
