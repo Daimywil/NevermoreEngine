@@ -288,8 +288,7 @@ function ServiceBag._addServiceType<T>(self: ServiceBag, serviceType: T)
 	end
 
 	-- Construct a new version of this service so we're isolated
-	local service = setmetatable({}, { __index = serviceType })
-	self._services[serviceType] = service
+	self._services[serviceType] = serviceType
 
 	self:_ensureInitialization(serviceType)
 end

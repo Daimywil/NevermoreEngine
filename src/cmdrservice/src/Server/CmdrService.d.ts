@@ -17,8 +17,10 @@ export interface CmdrService {
     commandData: CommandDefinition,
     execute: (context: CommandContext, ...args: any[]) => string | undefined
   ): void;
+  RegisterDefaultCommands(): void;
+  RegisterDefaultCommands(groups: Array<string>): void;
   RegisterDefaultCommands(
-    ...args: Parameters<typeof Cmdr.RegisterDefaultCommands>
+    filter: (command: CommandDefinition) => boolean
   ): void;
   SetGroupCommandPermissions(
     groupId: number,

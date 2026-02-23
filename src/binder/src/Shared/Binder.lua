@@ -271,16 +271,16 @@ end
 ]=]
 function Binder.ObserveAllBrio<T>(self: Binder<T>): Observable.Observable<Brio.Brio<T>>
 	return Observable.new(function(sub)
-		local maid = Maid.new()
+		local brios = {}
 
 		local function handleNewClass(class: T)
 			local brio = Brio.new(class)
-			maid[class :: any] = brio
+			brios[class] = brio
 
 			sub:Fire(brio)
 		end
 
-		maid:GiveTask(self:GetClassAddedSignal():Connect(handleNewClass))
+		local addedConnection = self:GetClassAddedSignal():Connect(handleNewClass)
 
 		for _, item in self:GetAll() do
 			if not sub:IsPending() then
@@ -290,13 +290,27 @@ function Binder.ObserveAllBrio<T>(self: Binder<T>): Observable.Observable<Brio.B
 			handleNewClass(item)
 		end
 
+		local removingConnection
 		if sub:IsPending() then
-			maid:GiveTask(self:GetClassRemovingSignal():Connect(function(class)
-				maid[class :: any] = nil
-			end))
+			removingConnection = self:GetClassRemovingSignal():Connect(function(class)
+				local brio = brios[class]
+				if brio then
+					brio:Destroy()
+					brios[class] = nil
+				end
+			end)
 		end
 
-		return maid
+		return function()
+			addedConnection:Disconnect()
+			if removingConnection then
+				removingConnection:Disconnect()
+			end
+
+			for _, brio in brios do
+				brio:Destroy()
+			end
+		end
 	end) :: any
 end
 
@@ -310,23 +324,31 @@ function Binder.ObserveBrio<T>(self: Binder<T>, instance: Instance): Observable.
 	assert(typeof(instance) == "Instance", "Bad instance")
 
 	return Observable.new(function(sub)
-		local maid = Maid.new()
+		local lastBrio
 
 		local function handleClassChanged(class)
-			if class then
-				local brio = Brio.new(class)
-				maid._lastBrio = brio
+			if lastBrio then
+				lastBrio:Destroy()
+				lastBrio = nil
+			end
 
-				sub:Fire(brio)
-			else
-				maid._lastBrio = nil
+			if class then
+				lastBrio = Brio.new(class)
+
+				sub:Fire(lastBrio)
 			end
 		end
 
-		maid:GiveTask(self:ObserveInstance(instance, handleClassChanged))
+		local pop = self:ObserveInstance(instance, handleClassChanged)
 		handleClassChanged(self:Get(instance))
 
-		return maid
+		return function()
+			pop()
+
+			if lastBrio then
+				lastBrio:Destroy()
+			end
+		end
 	end) :: any
 end
 
