@@ -27,30 +27,36 @@ function RxPlayerUtils.observePlayersBrio(predicate: Rx.Predicate<Player>?): Obs
 	assert(type(predicate) == "function" or predicate == nil, "Bad predicate!")
 
 	return Observable.new(function(sub)
-		local maid = Maid.new()
+		local brios = {}
 
-		local function handlePlayer(player: Player)
+		local function OnPlayerAdded(player: Player)
 			if predicate == nil or predicate(player) then
 				local brio = Brio.new(player)
-				maid[player] = brio
-
+				brios[player] = brio
 				sub:Fire(brio)
 			end
 		end
 
-		maid:GiveTask(Players.PlayerAdded:Connect(handlePlayer))
-
-		maid:GiveTask(Players.PlayerRemoving:Connect(function(player)
-			maid[player] = nil
-		end))
+		local playerAddedConnection = Players.PlayerAdded:Connect(OnPlayerAdded)
+		local playerRemovingConnection = Players.PlayerRemoving:Connect(function(player)
+			local brio = brios[player]
+			if brio then
+				brio:Destroy()
+				brios[player] = nil
+			end
+		end)
 
 		for _, player in Players:GetPlayers() do
-			task.spawn(function()
-				handlePlayer(player)
-			end)
+			OnPlayerAdded(player)
 		end
 
-		return maid
+		return function()
+			playerAddedConnection:Disconnect()
+			playerRemovingConnection:Disconnect()
+
+			for _, brio in brios do
+				brio:Destroy()
+			end
 	end) :: any
 end
 
@@ -107,23 +113,19 @@ function RxPlayerUtils.observePlayers(predicate: Rx.Predicate<Player>?): Observa
 	assert(type(predicate) == "function" or predicate == nil, "Bad predicate")
 
 	return Observable.new(function(sub)
-		local maid = Maid.new()
-
-		local function handlePlayer(player: Player)
-			if predicate == nil or predicate(player) then
+		local function OnPlayerAdded(player: Player)
+			if not predicate or predicate(player) then
 				sub:Fire(player)
 			end
 		end
 
-		maid:GiveTask(Players.PlayerAdded:Connect(handlePlayer))
+		local connection = Players.PlayerAdded:Connect(OnPlayerAdded)
 
 		for _, player in Players:GetPlayers() do
-			task.spawn(function()
-				handlePlayer(player)
-			end)
+			OnPlayerAdded(player)
 		end
 
-		return maid
+		return connection
 	end) :: any
 end
 
