@@ -57,6 +57,7 @@ function RxPlayerUtils.observePlayersBrio(predicate: Rx.Predicate<Player>?): Obs
 			for _, brio in brios do
 				brio:Destroy()
 			end
+		end
 	end) :: any
 end
 
