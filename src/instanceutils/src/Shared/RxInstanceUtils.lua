@@ -371,26 +371,37 @@ function RxInstanceUtils.observeChildrenBrio(
 	assert(type(predicate) == "function" or predicate == nil, "Bad predicate")
 
 	return Observable.new(function(sub)
-		local maid = Maid.new()
+		local brios = {}
 
-		local function handleChild(child: Instance)
+		local function OnChildAdded(child: Instance)
 			if not predicate or predicate(child) then
-				local value = Brio.new(child)
-				maid[child] = value
-				sub:Fire(value)
+				local brio = Brio.new(child)
+				brios[child] = brio
+				sub:Fire(brio)
 			end
 		end
 
-		maid:GiveTask(parent.ChildAdded:Connect(handleChild))
-		maid:GiveTask(parent.ChildRemoved:Connect(function(child)
-			maid[child] = nil
-		end))
+		local childAddedConnection = parent.ChildAdded:Connect(OnChildAdded)
+		local childRemovedConnection = parent.ChildRemoved:Connect(function(child)
+			local brio = brios[child]
+			if brio then
+				brio:Destroy()
+				brios[child] = nil
+			end
+		end)
 
 		for _, child in parent:GetChildren() do
-			handleChild(child)
+			OnChildAdded(child)
 		end
 
-		return maid
+		return function()
+			childAddedConnection:Disconnect()
+			childRemovedConnection:Disconnect()
+
+			for _, brio in brios do
+				brio:Destroy()
+			end
+		end
 	end) :: any
 end
 
