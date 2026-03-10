@@ -1,6 +1,5 @@
 type Loader = Record<string, unknown> & {
   __call(request: string | ModuleScript): unknown;
-  Destroy(): void;
 };
 
 interface LoaderConstructor {

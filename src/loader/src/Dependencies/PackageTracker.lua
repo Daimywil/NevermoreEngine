@@ -7,7 +7,6 @@
 
 local loader = script.Parent.Parent
 local DependencyUtils = require(loader.Dependencies.DependencyUtils)
-local Maid = require(loader.Maid)
 local ReplicationType = require(loader.Replication.ReplicationType)
 local ReplicationTypeUtils = require(loader.Replication.ReplicationTypeUtils)
 
@@ -27,7 +26,6 @@ export type PackageTrackerProvider = {
 
 export type PackageTracker = typeof(setmetatable(
 	{} :: {
-		_maid: Maid.Maid,
 		_packageTrackerProvider: PackageTrackerProvider,
 		_packageRoot: Instance,
 		_subpackagesMap: { [string]: Instance },
@@ -42,7 +40,6 @@ function PackageTracker.new(packageTrackerProvider: PackageTrackerProvider, pack
 	assert(typeof(packageRoot) == "Instance", "Bad packageRoot")
 
 	local self = setmetatable({}, PackageTracker)
-	self._maid = Maid.new()
 
 	self._packageTrackerProvider = assert(packageTrackerProvider, "No packageTrackerProvider")
 	self._packageRoot = assert(packageRoot, "No packageRoot")
@@ -62,10 +59,10 @@ function PackageTracker.StartTracking(self: PackageTracker)
 
 	if moduleScript ~= nil then
 		-- Module script children don't get to be observed
-		self._maid:GiveTask(self:_trackModuleScript(moduleScript, ReplicationType.SHARED))
+		self:_trackModuleScript(moduleScript, ReplicationType.SHARED)
 	else
 		local root = self._packageRoot :: Instance
-		self._maid:GiveTask(self:_trackChildren(root, ReplicationType.SHARED))
+		self:_trackChildren(root, ReplicationType.SHARED)
 	end
 end
 
@@ -171,70 +168,38 @@ function PackageTracker._trackChildrenAndReplicationType(
 	assert(typeof(parent) == "Instance", "Bad parent")
 	assert(ReplicationTypeUtils.isReplicationType(ancestorReplicationType), "Bad ancestorReplicationType")
 
-	local maid = Maid.new()
-
 	local lastReplicationType: ReplicationType.ReplicationType =
 		ReplicationTypeUtils.getFolderReplicationType(parent.Name, ancestorReplicationType)
 
-	maid:GiveTask(parent:GetPropertyChangedSignal("Name"):Connect(function()
-		local newReplicationType: ReplicationType.ReplicationType =
-			ReplicationTypeUtils.getFolderReplicationType(parent.Name, ancestorReplicationType)
-		if newReplicationType ~= lastReplicationType then
-			maid._current = self:_trackChildren(parent, newReplicationType)
-			lastReplicationType = newReplicationType
-		end
-	end))
-
-	maid._current = self:_trackChildren(parent, lastReplicationType)
-
-	return maid
+	self:_trackChildren(parent, lastReplicationType)
 end
 
 function PackageTracker._trackChildren(
 	self: PackageTracker,
 	parent: Instance,
 	ancestorReplicationType: ReplicationType.ReplicationType
-): Maid.Maid
+)
 	assert(typeof(parent) == "Instance", "Bad parent")
 	assert(ReplicationTypeUtils.isReplicationType(ancestorReplicationType), "Bad ancestorReplicationType")
 
-	local maid = Maid.new()
-
-	maid:GiveTask(parent.ChildAdded:Connect(function(child)
-		self:_handleChildAdded(maid, child, ancestorReplicationType)
-	end))
-	maid:GiveTask(parent.ChildRemoved:Connect(function(child)
-		self:_handleChildRemoved(maid, child)
-	end))
 	for _, child in parent:GetChildren() do
-		self:_handleChildAdded(maid, child, ancestorReplicationType)
+		self:_handleChildAdded(child, ancestorReplicationType)
 	end
-
-	return maid
 end
 
 function PackageTracker._handleChildAdded(
 	self: PackageTracker,
-	parentMaid: Maid.Maid,
 	child: Instance,
 	ancestorReplicationType: ReplicationType.ReplicationType
 )
-	assert(Maid.isMaid(parentMaid), "Bad maid")
 	assert(typeof(child) == "Instance", "Bad child")
 	assert(ReplicationTypeUtils.isReplicationType(ancestorReplicationType), "Bad ancestorReplicationType")
 
 	if child:IsA("ModuleScript") then
-		parentMaid[child] = self:_trackModuleScript(child, ancestorReplicationType)
+		self:_trackModuleScript(child, ancestorReplicationType)
 	elseif child:IsA("Folder") then
-		parentMaid[child] = self:_trackFolder(child, ancestorReplicationType)
+		self:_trackFolder(child, ancestorReplicationType)
 	end
-end
-
-function PackageTracker._handleChildRemoved(_self: PackageTracker, parentMaid: Maid.Maid, child: Instance)
-	assert(Maid.isMaid(parentMaid), "Bad maid")
-	assert(typeof(child) == "Instance", "Bad child")
-
-	parentMaid[child] = nil
 end
 
 function PackageTracker._trackFolder(
@@ -242,52 +207,15 @@ function PackageTracker._trackFolder(
 	child: Instance,
 	ancestorReplicationType: ReplicationType.ReplicationType
 )
-	assert(typeof(child) == "Instance", "Bad child")
-	assert(ReplicationTypeUtils.isReplicationType(ancestorReplicationType), "Bad ancestorReplicationType")
-
-	local maid = Maid.new()
-
-	maid:GiveTask(child:GetPropertyChangedSignal("Name"):Connect(function()
-		if child.Name == "node_modules skip" then
-			maid._current = self:_trackMainNodeModuleFolder(child)
-		else
-			maid._current = self:_trackChildrenAndReplicationType(child, ancestorReplicationType)
-		end
-	end))
-
-	if child.Name == "node_modules skip" then
-		maid._current = self:_trackMainNodeModuleFolder(child)
-	else
-		maid._current = self:_trackChildrenAndReplicationType(child, ancestorReplicationType)
-	end
-
-	return maid
+	self:_trackChildrenAndReplicationType(child, ancestorReplicationType)
 end
 
 function PackageTracker._trackModuleScript(
 	self: PackageTracker,
 	child: ModuleScript,
 	ancestorReplicationType: ReplicationType.ReplicationType
-): Maid.Maid
-	assert(typeof(child) == "Instance", "Bad child")
-	assert(ReplicationTypeUtils.isReplicationType(ancestorReplicationType), "Bad ancestorReplicationType")
-
-	local maid = Maid.new()
-
-	local function update()
-		if child.Archivable then
-			maid._current = self:_storeModuleScript(child.Name, child, ancestorReplicationType)
-		else
-			maid._current = nil
-		end
-	end
-
-	maid:GiveTask(child:GetPropertyChangedSignal("Name"):Connect(update))
-	maid:GiveTask(child:GetPropertyChangedSignal("Archivable"):Connect(update))
-
-	update()
-
-	return maid
+)
+	self:_storeModuleScript(child.Name, child, ancestorReplicationType)
 end
 
 function PackageTracker._storeModuleScript(
@@ -296,10 +224,6 @@ function PackageTracker._storeModuleScript(
 	child: ModuleScript,
 	ancestorReplicationType: ReplicationType.ReplicationType
 ): () -> ()
-	assert(type(moduleScriptName) == "string", "Bad moduleScriptName")
-	assert(typeof(child) == "Instance", "Bad child")
-	assert(ReplicationTypeUtils.isReplicationType(ancestorReplicationType), "Bad ancestorReplicationType")
-
 	if self._packageModuleScriptMap[moduleScriptName] then
 		local original = self._packageModuleScriptMap[moduleScriptName].moduleScript
 		local isOriginalQuentyOrDaimywil = original:FindFirstAncestor("@quenty") ~= nil
@@ -322,118 +246,43 @@ function PackageTracker._storeModuleScript(
 	end
 end
 
-function PackageTracker._trackMainNodeModuleFolder(self: PackageTracker, parent: Instance): Maid.Maid
-	local maid = Maid.new()
-
-	maid:GiveTask(parent.ChildAdded:Connect(function(child)
-		self:_handleNodeModulesChildAdded(maid, child)
-	end))
-	maid:GiveTask(parent.ChildRemoved:Connect(function(child)
-		self:_handleNodeModulesChildRemoved(maid, child)
-	end))
-	for _, child in parent:GetChildren() do
-		self:_handleNodeModulesChildAdded(maid, child)
-	end
-
-	return maid
-end
-
-function PackageTracker._handleNodeModulesChildAdded(self: PackageTracker, parentMaid: Maid.Maid, child: Instance)
-	assert(Maid.isMaid(parentMaid), "Bad maid")
-	assert(typeof(child) == "Instance", "Bad child")
-
+function PackageTracker._handleNodeModulesChildAdded(self: PackageTracker, child: Instance)
 	if child:IsA("ObjectValue") then
 		-- Assume symlinked package
-		parentMaid[child] = self:_trackNodeModulesObjectValue(child)
+		self:_trackNodeModulesObjectValue(child)
 	elseif child:IsA("Folder") then
-		parentMaid[child] = self:_trackNodeModulesChildFolder(child)
+		self:_trackNodeModulesChildFolder(child)
 	elseif child:IsA("ModuleScript") then
-		parentMaid[child] = self:_trackAddPackage(child)
+		self:_trackAddPackage(child)
 	end
 end
 
-function PackageTracker._handleNodeModulesChildRemoved(_self: PackageTracker, parentMaid: Maid.Maid, child: Instance)
-	assert(Maid.isMaid(parentMaid), "Bad maid")
-	assert(typeof(child) == "Instance", "Bad child")
+function PackageTracker._trackNodeModulesChildFolder(self: PackageTracker, child: Instance)
+	local childName = child.Name
 
-	parentMaid[child] = nil
-end
-
-function PackageTracker._trackNodeModulesChildFolder(self: PackageTracker, child: Instance): Maid.Maid
-	assert(typeof(child) == "Instance", "Bad child")
-
-	local maid = Maid.new()
-
-	local function update(): Maid.MaidTask
-		local childName = child.Name
-
-		-- like @quenty
-		if DependencyUtils.isPackageGroup(childName) then
-			return self:_trackScopedChildFolder(childName, child)
-		else
-			return self:_tryStorePackage(childName, child)
-		end
+	-- like @quenty
+	if DependencyUtils.isPackageGroup(childName) then
+		return self:_trackScopedChildFolder(childName, child)
+	else
+		return self:_tryStorePackage(childName, child)
 	end
-
-	maid:GiveTask(child:GetPropertyChangedSignal("Name"):Connect(function()
-		maid._current = update()
-	end))
-
-	maid._current = update()
-
-	return maid
 end
 
-function PackageTracker._trackNodeModulesObjectValue(self: PackageTracker, objectValue: ObjectValue): Maid.Maid
-	assert(typeof(objectValue) == "Instance", "Bad objectValue")
-
-	local maid = Maid.new()
-
-	maid:GiveTask(objectValue:GetPropertyChangedSignal("Name"):Connect(function()
-		maid._current = self:_tryStorePackage(objectValue.Name, objectValue.Value)
-	end))
-	maid:GiveTask(objectValue:GetPropertyChangedSignal("Value"):Connect(function()
-		maid._current = self:_tryStorePackage(objectValue.Name, objectValue.Value)
-	end))
-
-	maid._current = self:_tryStorePackage(objectValue.Name, objectValue.Value)
-
-	return maid
+function PackageTracker._trackNodeModulesObjectValue(self: PackageTracker, objectValue: ObjectValue)
+	self:_tryStorePackage(objectValue.Name, objectValue.Value)
 end
 
-function PackageTracker._trackScopedChildFolder(self: PackageTracker, scopeName: string, parent: Instance): Maid.Maid
-	assert(type(scopeName) == "string", "Bad scopeName")
-	assert(typeof(parent) == "Instance", "Bad parent")
-
-	local maid = Maid.new()
-
-	maid:GiveTask(parent.ChildAdded:Connect(function(child)
-		self:_handleScopedModulesChildAdded(scopeName, maid, child)
-	end))
-	maid:GiveTask(parent.ChildRemoved:Connect(function(child)
-		self:_handleScopedModulesChildRemoved(maid, child)
-	end))
+function PackageTracker._trackScopedChildFolder(self: PackageTracker, scopeName: string, parent: Instance)
 	for _, child in parent:GetChildren() do
-		self:_handleScopedModulesChildAdded(scopeName, maid, child)
+		self:_handleScopedModulesChildAdded(scopeName, child)
 	end
-
-	return maid
 end
 
-function PackageTracker._handleScopedModulesChildAdded(
-	self: PackageTracker,
-	scopeName: string,
-	parentMaid: Maid.Maid,
-	child: Instance
-)
-	assert(type(scopeName) == "string", "Bad scopeName")
-	assert(Maid.isMaid(parentMaid), "Bad maid")
-	assert(typeof(child) == "Instance", "Bad child")
-
+function PackageTracker._handleScopedModulesChildAdded(self: PackageTracker, scopeName: string, child: Instance)
 	if child:IsA("ObjectValue") then
-		parentMaid[child] = self:_trackScopedNodeModulesObjectValue(scopeName, child)
+		self:_trackScopedNodeModulesObjectValue(scopeName, child)
 	elseif child:IsA("Folder") or child:IsA("ModuleScript") then
-		parentMaid[child] = self:_trackAddScopedPackage(scopeName, child)
+		self:_trackAddScopedPackage(scopeName, child)
 	end
 end
 
@@ -442,57 +291,18 @@ function PackageTracker._trackScopedNodeModulesObjectValue(
 	scopeName: string,
 	objectValue: ObjectValue
 )
-	assert(type(scopeName) == "string", "Bad scopeName")
-	assert(typeof(objectValue) == "Instance", "Bad objectValue")
-
-	local maid = Maid.new()
-
-	maid:GiveTask(objectValue:GetPropertyChangedSignal("Name"):Connect(function()
-		maid._current = self:_tryStorePackage(scopeName .. "/" .. objectValue.Name, objectValue.Value)
-	end))
-	maid:GiveTask(objectValue:GetPropertyChangedSignal("Value"):Connect(function()
-		maid._current = self:_tryStorePackage(scopeName .. "/" .. objectValue.Name, objectValue.Value)
-	end))
-
-	maid._current = self:_tryStorePackage(scopeName .. "/" .. objectValue.Name, objectValue.Value)
-
-	return maid
-end
-
-function PackageTracker._handleScopedModulesChildRemoved(_self: PackageTracker, parentMaid: Maid.Maid, child: Instance)
-	assert(Maid.isMaid(parentMaid), "Bad maid")
-	assert(typeof(child) == "Instance", "Bad child")
-
-	parentMaid[child] = nil
+	self:_tryStorePackage(scopeName .. "/" .. objectValue.Name, objectValue.Value)
 end
 
 function PackageTracker._trackAddScopedPackage(self: PackageTracker, scopeName: string, child: Instance)
 	assert(type(scopeName) == "string", "Bad scopeName")
 	assert(typeof(child) == "Instance", "Bad child")
 
-	local maid = Maid.new()
-
-	maid:GiveTask(child:GetPropertyChangedSignal("Name"):Connect(function()
-		maid._current = self:_tryStorePackage(scopeName .. "/" .. child.Name, child)
-	end))
-
-	maid._current = self:_tryStorePackage(scopeName .. "/" .. child.Name, child)
-
-	return maid
+	self:_tryStorePackage(scopeName .. "/" .. child.Name, child)
 end
 
 function PackageTracker._trackAddPackage(self: PackageTracker, child: Instance)
-	assert(typeof(child) == "Instance", "Bad child")
-
-	local maid = Maid.new()
-
-	maid:GiveTask(child:GetPropertyChangedSignal("Name"):Connect(function()
-		maid._current = self:_tryStorePackage(child.Name, child)
-	end))
-
-	maid._current = self:_tryStorePackage(child.Name, child)
-
-	return maid
+	self:_tryStorePackage(child.Name, child)
 end
 
 function PackageTracker._tryStorePackage(
@@ -521,10 +331,6 @@ function PackageTracker._tryStorePackage(
 			self._subpackagesMap[fullPackageName] = nil
 		end
 	end
-end
-
-function PackageTracker.Destroy(self: PackageTracker)
-	self._maid:DoCleaning()
 end
 
 return PackageTracker

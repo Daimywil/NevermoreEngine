@@ -6,12 +6,10 @@
 ]=]
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local RunService = game:GetService("RunService")
 
 local DependencyUtils = require(script.Dependencies.DependencyUtils)
 local LoaderLinkCreator = require(script.LoaderLink.LoaderLinkCreator)
 local LoaderLinkUtils = require(script.LoaderLink.LoaderLinkUtils)
-local Maid = require(script.Maid)
 local PackageTrackerProvider = require(script.Dependencies.PackageTrackerProvider)
 local ReplicationType = require(script.Replication.ReplicationType)
 local ReplicationTypeUtils = require(script.Replication.ReplicationTypeUtils)
@@ -19,9 +17,6 @@ local Replicator = require(script.Replication.Replicator)
 local ReplicatorReferences = require(script.Replication.ReplicatorReferences)
 
 local GLOBAL_PACKAGE_TRACKER = PackageTrackerProvider.new()
-script.Destroying:Connect(function()
-	GLOBAL_PACKAGE_TRACKER:Destroy()
-end)
 
 local Loader = {}
 Loader.__index = Loader
@@ -32,8 +27,6 @@ function Loader.new(packages: Instance, replicationType: ReplicationType.Replica
 	assert(ReplicationTypeUtils.isReplicationType(replicationType), "Bad replicationType")
 
 	local self = setmetatable({}, Loader)
-
-	self._maid = Maid.new()
 
 	self._replicationType = assert(replicationType, "No replicationType")
 	self._packages = assert(packages, "No packages")
@@ -191,27 +184,22 @@ function Loader:_findDependency(request: string)
 end
 
 function Loader:_setupClientReplication()
-	local copy = self._maid:Add(Instance.new("Folder"))
+	local copy = Instance.new("Folder")
 	copy.Name = self._packages.Name
 
 	local references = ReplicatorReferences.new()
 
-	local replicator = self._maid:Add(Replicator.new(references))
+	local replicator = Replicator.new(references)
 	replicator:SetTarget(copy)
 	replicator:ReplicateFrom(self._packages)
 
-	self._maid:Add(LoaderLinkCreator.new(copy, references, true))
+	LoaderLinkCreator.new(copy, references, true)
 
 	copy.Parent = ReplicatedStorage
 end
 
 function Loader:_setupLoaderPopulation(root)
-	self._maid:Add(LoaderLinkCreator.new(root, nil, true))
-end
-
-function Loader:Destroy()
-	self._maid:DoCleaning()
-	setmetatable(self, nil)
+	LoaderLinkCreator.new(root, nil, true)
 end
 
 return Loader
