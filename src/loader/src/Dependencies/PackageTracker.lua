@@ -302,8 +302,9 @@ function PackageTracker._storeModuleScript(
 
 	if self._packageModuleScriptMap[moduleScriptName] then
 		local original = self._packageModuleScriptMap[moduleScriptName].moduleScript
-		local isOriginalQuenty = original:FindFirstAncestor("@quenty") ~= nil
-		if isOriginalQuenty then
+		local isOriginalQuentyOrDaimywil = original:FindFirstAncestor("@quenty") ~= nil
+			or original:FindFirstAncestor("@daimywil") ~= nil
+		if isOriginalQuentyOrDaimywil then
 			return function() end
 		end
 	end
