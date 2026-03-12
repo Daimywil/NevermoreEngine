@@ -185,16 +185,17 @@ function BrioUtils.extend(brio, ...)
 		current[values.n + i] = otherValues[i]
 	end
 
-	local maid = Maid.new()
 	local newBrio = Brio.new(unpack(current, 1, values.n + otherValues.n))
 
-	maid:GiveTask(brio:GetDiedSignal():Connect(function()
+	local originalDiedConnection = brio:GetDiedSignal():Connect(function()
 		newBrio:Kill()
-	end))
+	end)
 
-	maid:GiveTask(newBrio:GetDiedSignal():Connect(function()
-		maid:DoCleaning()
-	end))
+	local newDiedConnection
+	newDiedConnection = newBrio:GetDiedSignal():Connect(function()
+		originalDiedConnection:Disconnect()
+		newDiedConnection:Disconnect()
+	end)
 
 	return newBrio
 end
