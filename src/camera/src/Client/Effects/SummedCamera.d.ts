@@ -4,7 +4,7 @@ import { CameraEffect } from './CameraEffectUtils';
 interface SummedCamera extends CameraEffect {
   readonly CameraAState: CameraState;
   readonly CameraBState: CameraState;
-  SetMode(mode: 'World' | 'Relative' | 'WorldPosition'): this;
+  SetMode(mode: 'World' | 'Relative' | 'WorldPositionNoFov'): this;
   __add(other: CameraEffect): SummedCamera;
   __sub(other: CameraEffect): CameraEffect;
 }
