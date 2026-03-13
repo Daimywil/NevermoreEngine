@@ -14,7 +14,7 @@ local QFrame = require("QFrame")
 local SummedCamera = {}
 SummedCamera.ClassName = "SummedCamera"
 
-export type SummedCameraMode = "World" | "Relative"
+export type SummedCameraMode = "World" | "Relative" | "WorldPositionNoFov"
 
 export type SummedCamera =
 	typeof(setmetatable(
@@ -58,7 +58,7 @@ end
 	@return SummedCamera
 ]=]
 function SummedCamera.SetMode(self: SummedCamera, mode: SummedCameraMode): SummedCamera
-	assert(mode == "World" or mode == "Relative", "Bad mode")
+	assert(mode == "World" or mode == "Relative" or mode == "WorldPositionNoFov", "Bad mode")
 	self._mode = mode
 
 	return self
@@ -84,11 +84,7 @@ end
 
 function SummedCamera.__index(self: SummedCamera, index)
 	if index == "CameraState" then
-		if self._mode == "World" then
-			-- TODO: fix this
-			-- return self.CameraAState + self.CameraBState
-			error("not implemented")
-		else
+		if self._mode == "Relative" then
 			local a = self.CameraAState
 			local b = self.CameraBState
 
@@ -109,6 +105,18 @@ function SummedCamera.__index(self: SummedCamera, index)
 			-- result.CFrame =
 			-- result.Position = a.CFrame * b.Position
 			return result
+		elseif self._mode == "WorldPositionNoFov" then
+			local a = self.CameraAState
+			local b = self.CameraBState
+
+			local newQFrame = QFrame.fromCFrameClosestTo(a.CFrame + b.CFrame.Position, a.CameraFrame.QFrame)
+			local cameraFrame = CameraFrame.new(newQFrame, a.FieldOfView)
+
+			return CameraState.new(cameraFrame)
+		else
+			-- TODO: fix this
+			-- return self.CameraAState + self.CameraBState
+			error("not implemented")
 		end
 	elseif index == "CameraAState" then
 		return self._cameraA.CameraState or self._cameraA
