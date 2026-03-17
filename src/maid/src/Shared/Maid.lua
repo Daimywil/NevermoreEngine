@@ -295,4 +295,15 @@ end
 ]]
 Maid.Destroy = Maid.DoCleaning
 
+function Maid.DeriveNewMaid(self)
+	local newMaid = Maid.new()
+	self[newMaid] = newMaid
+
+	newMaid:GiveTask(function()
+		self[newMaid] = nil
+	end)
+
+	return newMaid
+end
+
 return Maid
