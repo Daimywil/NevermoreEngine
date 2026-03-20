@@ -780,6 +780,10 @@ function Binder._remove<T>(self: Binder<T>, inst: Instance)
 	end
 end
 
+function Binder.__iter<T>(self: Binder<T>)
+	return pairs(self._instToClass)
+end
+
 --[=[
 	Cleans up all bound classes, and disconnects all events.
 ]=]

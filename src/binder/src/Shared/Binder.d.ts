@@ -8,7 +8,7 @@ interface Static {
   readonly ClassName: 'Binder';
 }
 
-export interface Binder<T> extends Static {
+export type Binder<T> = Static & {
   readonly ServiceName: string;
   Init(): void;
   Start(): void;
@@ -37,7 +37,7 @@ export interface Binder<T> extends Static {
   Create(className?: string): Instance;
   Observe(instance: Instance): Observable<T | undefined>;
   Destroy(): void;
-}
+} & IterableFunction<T>;
 
 interface BinderConstructor extends Static {
   isBinder: (value: unknown) => value is Binder<unknown>;
