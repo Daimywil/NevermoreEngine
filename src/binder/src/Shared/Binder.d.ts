@@ -14,6 +14,7 @@ export type Binder<T> = Static & {
   Start(): void;
   GetTag(): string;
   GetConstructor(): new (instance: Instance, ...args: unknown[]) => T;
+  ObserveAll(): Observable<T>;
   ObserveAllBrio(): Observable<Brio<T>>;
   ObserveBrio(instance: Instance): Observable<Brio<T>>;
   ObserveInstance(

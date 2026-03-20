@@ -314,6 +314,26 @@ function Binder.ObserveAllBrio<T>(self: Binder<T>): Observable.Observable<Brio.B
 	end) :: any
 end
 
+function Binder.ObserveAll<T>(self: Binder<T>): Observable.Observable<Brio.Brio<T>>
+	return Observable.new(function(sub)
+		local function OnClassAdded(class: T)
+			sub:Fire(class)
+		end
+
+		local addedConnection = self:GetClassAddedSignal():Connect(OnClassAdded)
+
+		for _, item in self:GetAll() do
+			if not sub:IsPending() then
+				break
+			end
+
+			OnClassAdded(item)
+		end
+
+		return addedConnection
+	end) :: any
+end
+
 --[=[
 	Observes a bound class on a given instance.
 
