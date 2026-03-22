@@ -121,6 +121,11 @@ function GroupPermissionProvider._promiseIsCreator(
 		return Promise.resolved(true)
 	end
 
+	if self._config.creatorUserIds and table.find(self._config.creatorUserIds, player.UserId) then
+		self._creatorCache[player.UserId] = true
+		return Promise.resolved(true)
+	end
+
 	return self:_promiseRankInGroup(player):Then(function(rank)
 		return rank >= self._config.minCreatorRequiredRank
 	end)
@@ -141,6 +146,17 @@ function GroupPermissionProvider._promiseIsAdmin(
 		return Promise.resolved(true)
 	end
 
+	if self._config.adminUserIds and table.find(self._config.adminUserIds, player.UserId) then
+		self._adminsCache[player.UserId] = true
+		return Promise.resolved(true)
+	end
+
+	-- creators are also admins
+	if self._config.creatorUserIds and table.find(self._config.creatorUserIds, player.UserId) then
+		self._creatorCache[player.UserId] = true
+		return Promise.resolved(true)
+	end
+
 	return self:_promiseRankInGroup(player):Then(function(rank)
 		return rank >= self._config.minAdminRequiredRank
 	end)
@@ -156,11 +172,15 @@ function GroupPermissionProvider._handlePlayer(self: GroupPermissionProvider, pl
 	end
 
 	self:_promiseRankInGroup(player):Then(function(rank)
-		if rank >= self._config.minAdminRequiredRank then
+		local isAdmin = rank >= self._config.minAdminRequiredRank
+			or (self._config.adminUserIds and table.find(self._config.adminUserIds, player.UserId))
+		if isAdmin then
 			self._adminsCache[player.UserId] = true
 		end
 
-		if rank >= self._config.minCreatorRequiredRank then
+		local isCreator = rank >= self._config.minCreatorRequiredRank
+			or (self._config.creatorUserIds and table.find(self._config.creatorUserIds, player.UserId))
+		if isCreator then
 			self._creatorCache[player.UserId] = true
 		end
 	end)

@@ -12,7 +12,6 @@ local GetRemoteFunction = require("GetRemoteFunction")
 local PermissionLevel = require("PermissionLevel")
 local PermissionProviderUtils = require("PermissionProviderUtils")
 local Promise = require("Promise")
-local Table = require("Table")
 
 local BasePermissionProvider = setmetatable({}, BaseObject)
 BasePermissionProvider.ClassName = "BasePermissionProvider"
@@ -38,7 +37,7 @@ export type BasePermissionProvider =
 function BasePermissionProvider.new(config: PermissionProviderUtils.PermissionProviderConfig): BasePermissionProvider
 	local self: BasePermissionProvider = setmetatable(BaseObject.new() :: any, BasePermissionProvider)
 
-	self._config = Table.readonly(assert(config, "Bad config") :: any)
+	self._config = table.freeze(assert(config, "Bad config") :: any)
 	self._remoteFunctionName = assert(self._config.remoteFunctionName, "Bad config")
 
 	return self
@@ -164,7 +163,7 @@ function BasePermissionProvider._onServerInvoke(self: BasePermissionProvider, pl
 		return false
 	end
 
-	return result and true or false
+	return if result == true then true else false
 end
 
 return BasePermissionProvider

@@ -17,6 +17,8 @@ type GroupRankConfig_Input = {
 	minAdminRequiredRank: number,
 	minCreatorRequiredRank: number,
 	remoteFunctionName: string?,
+	creatorUserIds: { number }?,
+	adminUserIds: { number }?,
 }
 
 export type GroupRankConfig = {
@@ -49,6 +51,8 @@ function PermissionProviderUtils.createGroupRankConfig(config: GroupRankConfig_I
 		groupId = config.groupId,
 		minAdminRequiredRank = config.minAdminRequiredRank,
 		minCreatorRequiredRank = config.minCreatorRequiredRank,
+		creatorUserIds = config.creatorUserIds,
+		adminUserIds = config.adminUserIds,
 		remoteFunctionName = config.remoteFunctionName or PermissionProviderConstants.DEFAULT_REMOTE_FUNCTION_NAME,
 	}
 end
