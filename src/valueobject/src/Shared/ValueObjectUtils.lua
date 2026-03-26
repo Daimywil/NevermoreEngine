@@ -1,4 +1,5 @@
 --!strict
+local Signal = require(script.Parent.Parent.Parent.signal.Shared.Signal)
 --[=[
 	Utils that work with Roblox Value objects (and also ValueObject)
 	@class ValueObjectUtils
@@ -17,17 +18,19 @@ local ValueObjectUtils = {}
 	Syncs the value from `from` to `to`.
 	@param from ValueObject<T>
 	@param to ValueObject<T>
-	@return MaidTask
+	@return Connection
 ]=]
-function ValueObjectUtils.syncValue<T>(from: ValueObject.ValueObject<T>, to: ValueObject.ValueObject<T>): Maid.Maid
-	local maid = Maid.new()
+function ValueObjectUtils.syncValue<T>(
+	from: ValueObject.ValueObject<T>,
+	to: ValueObject.ValueObject<T>
+): Signal.Connection<...T>
+	local connection = from.Changed:Connect(function()
+		to.Value = from.Value
+	end)
+
 	to.Value = from.Value
 
-	maid:GiveTask(from.Changed:Connect(function()
-		to.Value = from.Value
-	end))
-
-	return maid
+	return connection
 end
 
 --[=[
