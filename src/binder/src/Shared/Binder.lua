@@ -808,7 +808,7 @@ function Binder._remove<T>(self: Binder<T>, inst: Instance)
 end
 
 function Binder.__iter<T>(self: Binder<T>)
-	return pairs(self._instToClass)
+	return pairs(self._allClassSet)
 end
 
 function Binder.GetCount<T>(self: Binder<T>): number
