@@ -37,6 +37,7 @@ export type Binder<T> = Static & {
   Promise(instance: Instance, cancelToken?: CancelToken): Promise<T>;
   Create(className?: string): Instance;
   Observe(instance: Instance): Observable<T | undefined>;
+  GetCount(): number;
   Destroy(): void;
 } & IterableFunction<T>;
 

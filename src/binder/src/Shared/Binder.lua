@@ -62,6 +62,7 @@ export type Binder<T> = typeof(setmetatable(
 		_defaultClassType: string,
 		_args: { any },
 		_constructor: BinderConstructor<T>,
+		_count: number,
 
 		_started: boolean,
 		_initialized: boolean,
@@ -168,6 +169,8 @@ function Binder:Init(...)
 	self._pendingInstSet = {} -- [inst] = true
 
 	self._listeners = {} -- [inst] = callback
+
+	self._count = 0
 
 	if select("#", ...) > 0 then
 		if not self._args then
@@ -752,6 +755,8 @@ function Binder._add<T>(self: Binder<T>, inst: Instance)
 	self._allClassSet[class] = true
 	self._instToClass[inst] = class
 
+	self._count += 1
+
 	-- Fire events
 	local listeners = self._listeners[inst]
 	if listeners then
@@ -782,6 +787,8 @@ function Binder._remove<T>(self: Binder<T>, inst: Instance)
 	self._instToClass[inst] = nil
 	self._allClassSet[class] = nil
 
+	self._count -= 1
+
 	-- Fire listener here
 	local listeners = self._listeners[inst]
 	if listeners then
@@ -802,6 +809,10 @@ end
 
 function Binder.__iter<T>(self: Binder<T>)
 	return pairs(self._instToClass)
+end
+
+function Binder.GetCount<T>(self: Binder<T>): number
+	return self._count
 end
 
 --[=[
