@@ -295,13 +295,17 @@ end
 ]]
 Maid.Destroy = Maid.DoCleaning
 
-function Maid.DeriveNewMaid(self)
+function Maid.DeriveNewMaid(self, duration: number?)
 	local newMaid = Maid.new()
 	self[newMaid] = newMaid
 
 	newMaid:GiveTask(function()
 		self[newMaid] = nil
 	end)
+
+	if duration then
+		newMaid:GiveTask(task.delay(duration, newMaid.Destroy, newMaid))
+	end
 
 	return newMaid
 end

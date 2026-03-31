@@ -12,7 +12,7 @@ type Maid = {
 } & {
   GiveTask(task: MaidTask): number;
   Add<T extends MaidTask>(task: T): T;
-  DeriveNewMaid(): Maid;
+  DeriveNewMaid(duration?: number): Maid;
   DoCleaning(): void;
   Destroy(): void;
 } & Map<unknown, MaidTask | undefined>;
