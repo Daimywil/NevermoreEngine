@@ -13,7 +13,7 @@ export interface ValueObjectLike<T> {
   ObserveBrio(
     predicate: (value: T) => value is Exclude<T, NonNullable<T>>
   ): Observable<Brio<Exclude<T, NonNullable<T>>>>;
-  ObserveBrio(predicate: (value: T) => boolean): Observable<Brio<T>>;
+  ObserveBrio(predicate?: (value: T) => boolean): Observable<Brio<T>>;
 }
 
 type CheckType =
