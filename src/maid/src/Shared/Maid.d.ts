@@ -20,6 +20,8 @@ type Maid = {
 interface MaidConstructor {
   readonly ClassName: 'Maid';
   new (): Maid;
+
+  Timed: (duration: number) => Maid;
 }
 
 export const Maid: MaidConstructor;

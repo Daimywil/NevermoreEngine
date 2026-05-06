@@ -310,4 +310,12 @@ function Maid.DeriveNewMaid(self, duration: number?)
 	return newMaid
 end
 
+function Maid.Timed(duration: number): Maid
+	local maid = Maid.new()
+
+	maid:GiveTask(task.delay(duration, maid.Destroy, maid))
+
+	return maid
+end
+
 return Maid
