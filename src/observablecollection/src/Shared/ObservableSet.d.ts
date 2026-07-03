@@ -11,6 +11,9 @@ type ObservableSet<T> = {
   Contains(item: T): boolean;
   GetCount(): number;
   ObserveCount(): Observable<number>;
+  ObserveCountBrio(
+    predicate?: (count: number) => boolean
+  ): Observable<Brio<number>>;
   Add(item: T): () => void;
   Remove(item: T): void;
   GetFirstItem(): T | undefined;

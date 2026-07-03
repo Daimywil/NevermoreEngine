@@ -206,6 +206,10 @@ function ObservableSet.ObserveCount<T>(self: ObservableSet<T>): Observable.Obser
 	return self._countValue:Observe()
 end
 
+function ObservableSet.ObserveCountBrio<T>(self: ObservableSet<T>, predicate)
+	return self._countValue:ObserveBrio(predicate)
+end
+
 --[=[
 	Adds the item to the set if it does not exists.
 	@param item T
