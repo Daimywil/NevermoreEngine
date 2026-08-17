@@ -35,8 +35,6 @@ end
 	@param ... TEmit
 ]=]
 function ObservableSubscriptionTable.Fire<T...>(self: ObservableSubscriptionTable<T...>, key: any, ...)
-	assert(key ~= nil, "Bad key")
-
 	local subs = self._subMap[key]
 	if not subs then
 		return
@@ -126,8 +124,6 @@ function ObservableSubscriptionTable.Observe<T...>(
 	key: any,
 	retrieveInitialValue: RetrieveInitialValue<T...>?
 ): Observable.Observable<T...>
-	assert(key ~= nil, "Bad key")
-
 	return Observable.new(function(sub)
 		if not self._subMap[key] then
 			self._subMap[key] = { sub }
@@ -170,7 +166,6 @@ end
 function ObservableSubscriptionTable.Destroy<T...>(self: ObservableSubscriptionTable<T...>): ()
 	while next(self._subMap) do
 		local key, list = next(self._subMap)
-		assert(key, "Key should not be nil")
 
 		self._subMap[key] = nil
 

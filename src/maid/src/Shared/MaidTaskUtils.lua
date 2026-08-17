@@ -41,15 +41,16 @@ end
 	@param job MaidTask -- Task to execute
 ]=]
 function MaidTaskUtils.doTask(job: MaidTask): ()
-	if typeof(job) == "function" then
+	local jobType = typeof(job)
+	if jobType == "function" then
 		(job :: any)()
-	elseif typeof(job) == "table" then
+	elseif jobType == "table" then
 		if type(job.Destroy) == "function" then
 			job:Destroy()
 		end
-	elseif typeof(job) == "Instance" then
+	elseif jobType == "Instance" then
 		job:Destroy()
-	elseif typeof(job) == "thread" then
+	elseif jobType == "thread" then
 		local cancelled
 		if coroutine.running() ~= job then
 			cancelled = pcall(task.cancel, job)
@@ -58,10 +59,8 @@ function MaidTaskUtils.doTask(job: MaidTask): ()
 		if not cancelled then
 			task.defer(task.cancel, job)
 		end
-	elseif typeof(job) == "RBXScriptConnection" then
+	elseif jobType == "RBXScriptConnection" then
 		job:Disconnect()
-	else
-		error(string.format("[MaidTaskUtils.doTask] - Bad job of type %q", typeof(job)))
 	end
 end
 
@@ -78,9 +77,6 @@ end
 	@return () -> () -- function that will execute the job delayed
 ]=]
 function MaidTaskUtils.delayed(time: number, job: MaidTask): () -> ()
-	assert(type(time) == "number", "Bad time")
-	assert(MaidTaskUtils.isValidTask(job), "Bad job")
-
 	return function(): ()
 		task.delay(time, function()
 			MaidTaskUtils.doTask(job)

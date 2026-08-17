@@ -173,8 +173,6 @@ end
 	@return Observable<number?>
 ]=]
 function ObservableList.ObserveIndex<T>(self: ObservableList<T>, indexToObserve: number): Observable.Observable<number?>
-	assert(type(indexToObserve) == "number", "Bad indexToObserve")
-
 	local key = self._keyList[indexToObserve]
 	if not key then
 		error(string.format("No entry at index %d, cannot observe changes", indexToObserve))
@@ -196,8 +194,6 @@ end
 	@return Observable<T?>
 ]=]
 function ObservableList.ObserveAtIndex<T>(self: ObservableList<T>, indexToObserve: number): Observable.Observable<T?>
-	assert(type(indexToObserve) == "number", "Bad indexToObserve")
-
 	return self._indexObservers:Observe(indexToObserve, function(sub)
 		sub:Fire(self:Get(indexToObserve))
 	end)
@@ -214,8 +210,6 @@ function ObservableList.ObserveAtIndexBrio<T>(
 	self: ObservableList<T>,
 	indexToObserve: number
 ): Observable.Observable<Brio.Brio<T>>
-	assert(type(indexToObserve) == "number", "Bad indexToObserve")
-
 	return self:ObserveAtIndex(indexToObserve):Pipe({
 		RxBrioUtils.toBrio() :: any,
 		RxBrioUtils.onlyLastBrioSurvives() :: any,
@@ -256,8 +250,6 @@ end
 	@return Observable<number?>
 ]=]
 function ObservableList.ObserveIndexByKey<T>(self: ObservableList<T>, key: Symbol.Symbol): Observable.Observable<number?>
-	assert(Symbol.isSymbol(key), "Bad key")
-
 	return self._keyIndexObservables:Observe(key, function(sub)
 		sub:Fire(self:GetIndexByKey(key))
 	end) :: any
@@ -311,8 +303,6 @@ end
 	@return T?
 ]=]
 function ObservableList.Get<T>(self: ObservableList<T>, index: number): T?
-	assert(type(index) == "number", "Bad index")
-
 	index = ListIndexUtils.toPositiveIndex(#self._keyList, index)
 
 	local key = self._keyList[index]
@@ -330,9 +320,6 @@ end
 	@return callback -- Call to remove
 ]=]
 function ObservableList.InsertAt<T>(self: ObservableList<T>, item: T, index: number?): () -> ()
-	assert(item ~= nil, "Bad item")
-	assert(type(index) == "number", "Bad index")
-
 	index = math.clamp(index, 1, #self._keyList + 1)
 
 	local key = Symbol.named("entryKey")
@@ -389,8 +376,6 @@ end
 	@return T
 ]=]
 function ObservableList.RemoveAt<T>(self: ObservableList<T>, index: number): T?
-	assert(type(index) == "number", "Bad index")
-
 	local key = self._keyList[index]
 	if not key then
 		return nil
@@ -405,8 +390,6 @@ end
 	@return T
 ]=]
 function ObservableList.RemoveByKey<T>(self: ObservableList<T>, key): T?
-	assert(key ~= nil, "Bad key")
-
 	local index = self._indexes[key]
 	if not index then
 		return nil

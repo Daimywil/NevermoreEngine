@@ -797,9 +797,7 @@ function Binder._remove<T>(self: Binder<T>, inst: Instance)
 		end
 	end
 
-	if MaidTaskUtils.isValidTask(class) then
-		MaidTaskUtils.doTask(class)
-	end
+	MaidTaskUtils.doTask(class)
 
 	-- Fire off events
 	if self._classRemovedSignal then

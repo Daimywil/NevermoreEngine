@@ -136,16 +136,17 @@ function Maid.__newindex(self: Maid, index: any, newTask: MaidTask)
 	tasks[index] = newTask
 
 	if job then
-		if typeof(job) == "function" then
+		local jobType = typeof(job)
+		if jobType == "function" then
 			(job :: any)()
-		elseif typeof(job) == "table" then
+		elseif jobType == "table" then
 			local destructable: any = job
 			if type(destructable.Destroy) == "function" then
 				destructable:Destroy()
 			end
-		elseif typeof(job) == "Instance" then
+		elseif jobType == "Instance" then
 			job:Destroy()
-		elseif typeof(job) == "thread" then
+		elseif jobType == "thread" then
 			local cancelled
 			if coroutine.running() ~= job then
 				cancelled = pcall(task.cancel, job)
@@ -154,7 +155,7 @@ function Maid.__newindex(self: Maid, index: any, newTask: MaidTask)
 			if not cancelled then
 				task.defer(task.cancel, job)
 			end
-		elseif typeof(job) == "RBXScriptConnection" then
+		elseif jobType == "RBXScriptConnection" then
 			job:Disconnect()
 		end
 	end
@@ -259,13 +260,14 @@ function Maid.DoCleaning(self: Maid)
 	local index, job = next(tasks)
 	while job ~= nil do
 		tasks[index] = nil
-		if typeof(job) == "function" then
+		local jobType = typeof(job)
+		if jobType == "function" then
 			(job :: any)()
-		elseif typeof(job) == "table" and type((job :: any).Destroy) == "function" then
+		elseif jobType == "table" and type((job :: any).Destroy) == "function" then
 			(job :: any):Destroy()
-		elseif typeof(job) == "Instance" then
+		elseif jobType == "Instance" then
 			job:Destroy()
-		elseif typeof(job) == "thread" then
+		elseif jobType == "thread" then
 			local cancelled
 			if coroutine.running() ~= job then
 				cancelled = pcall(function()
@@ -279,7 +281,7 @@ function Maid.DoCleaning(self: Maid)
 					task.cancel(toCancel)
 				end)
 			end
-		elseif typeof(job) == "RBXScriptConnection" then
+		elseif jobType == "RBXScriptConnection" then
 			job:Disconnect()
 		end
 		index, job = next(tasks)

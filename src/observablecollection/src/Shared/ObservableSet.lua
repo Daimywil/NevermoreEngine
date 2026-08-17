@@ -148,8 +148,6 @@ end
 	@return Observable<boolean>
 ]=]
 function ObservableSet.ObserveContains<T>(self: ObservableSet<T>, item: T): Observable.Observable<boolean>
-	assert(item ~= nil, "Bad item")
-
 	return Observable.new(function(sub)
 		if not self.Destroy then
 			return sub:Fail("ObservableSet is already cleaned up")
@@ -183,8 +181,6 @@ end
 	@return boolean
 ]=]
 function ObservableSet.Contains<T>(self: ObservableSet<T>, item: T): boolean
-	assert(item ~= nil, "Bad item")
-
 	return self._set[item] == true
 end
 
@@ -216,8 +212,6 @@ end
 	@return callback -- Call to remove
 ]=]
 function ObservableSet.Add<T>(self: ObservableSet<T>, item: T): () -> ()
-	assert(item ~= nil, "Bad item")
-
 	if not self._set[item] then
 		self._set[item] = true
 
@@ -240,8 +234,6 @@ end
 	@return True if removed
 ]=]
 function ObservableSet.Remove<T>(self: ObservableSet<T>, item: T): boolean
-	assert(item ~= nil, "Bad item")
-
 	if self._set[item] then
 		self._set[item] = nil
 

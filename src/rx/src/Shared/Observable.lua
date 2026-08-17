@@ -62,8 +62,6 @@ local DuckTypeUtils = require("DuckTypeUtils")
 local MaidTaskUtils = require("MaidTaskUtils")
 local Subscription = require("Subscription")
 
-local ENABLE_STACK_TRACING = false
-
 local Observable = {}
 Observable.ClassName = "Observable"
 Observable.__index = Observable
@@ -74,7 +72,6 @@ export type Transformer<T..., U...> = (observable: Observable<T...>) -> Observab
 
 export type Observable<T...> = typeof(setmetatable(
 	{} :: {
-		_source: string?,
 		_onSubscribe: OnSubscribe<T...>,
 	},
 	{} :: typeof({ __index = Observable })
@@ -118,10 +115,7 @@ end
 	@return Observable<T>
 ]=]
 function Observable.new<T...>(onSubscribe: OnSubscribe<T...>): Observable<T...>
-	assert(type(onSubscribe) == "function", "Bad onSubscribe")
-
 	return setmetatable({
-		_source = if ENABLE_STACK_TRACING then debug.traceback("Observable.new()", 2) else nil,
 		_onSubscribe = onSubscribe,
 	}, Observable)
 end
@@ -147,13 +141,9 @@ end
 	@return Observable<T>
 ]=]
 function Observable.Pipe<T...>(self: Observable<T...>, transformers: { Transformer<T..., ...any> }): Observable<...any>
-	assert(type(transformers) == "table", "Bad transformers")
-
 	local current: any = self
 	for _, transformer in transformers do
-		assert(type(transformer) == "function", "Bad transformer")
 		current = transformer(current)
-		assert(Observable.isObservable(current), "Transformer must return an observable")
 	end
 
 	return current
@@ -174,7 +164,7 @@ function Observable.Subscribe<T...>(
 	failCallback: Subscription.FailCallback?,
 	completeCallback: Subscription.CompleteCallback?
 ): Subscription.Subscription<T...>
-	local sub = Subscription.new(fireCallback, failCallback, completeCallback, self._source)
+	local sub = Subscription.new(fireCallback, failCallback, completeCallback)
 
 	sub:_assignCleanup(self._onSubscribe(sub))
 

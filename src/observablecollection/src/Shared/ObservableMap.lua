@@ -171,8 +171,6 @@ end
 	@return TValue
 ]=]
 function ObservableMap.Get<TKey, TValue>(self: ObservableMap<TKey, TValue>, key: TKey): TValue?
-	assert(key ~= nil, "Bad key")
-
 	return self._map[key]
 end
 
@@ -182,8 +180,6 @@ end
 	@return boolean
 ]=]
 function ObservableMap.ContainsKey<TKey, TValue>(self: ObservableMap<TKey, TValue>, key: TKey): boolean
-	assert(key ~= nil, "Bad key")
-
 	return self._map[key] ~= nil
 end
 
@@ -216,8 +212,6 @@ function ObservableMap.ObserveAtKeyBrio<TKey, TValue>(
 	self: ObservableMap<TKey, TValue>,
 	key: TKey
 ): Observable.Observable<Brio.Brio<TValue>>
-	assert(key ~= nil, "Bad key")
-
 	return self:ObserveAtKey(key):Pipe({
 		RxBrioUtils.switchToBrio(function(value): boolean
 			return value ~= nil
@@ -232,8 +226,6 @@ end
 	@return Observable<TValue?>
 ]=]
 function ObservableMap.ObserveAtKey<TKey, TValue>(self: ObservableMap<TKey, TValue>, key: TKey): Observable.Observable<TValue?>
-	assert(key ~= nil, "Bad key")
-
 	return self._keySubTable:Observe(key, function(sub)
 		sub:Fire(self._map[key] :: any)
 	end) :: any
@@ -256,8 +248,6 @@ ObservableMap.ObserveValueForKey = ObservableMap.ObserveAtKey
 	@return callback -- Call to remove the value if it was added
 ]=]
 function ObservableMap.Set<TKey, TValue>(self: ObservableMap<TKey, TValue>, key: TKey, value: TValue?): () -> ()
-	assert(key ~= nil, "Bad key")
-
 	local oldValue: TValue? = self._map[key]
 	if oldValue == value then
 		-- no removal since we never added. this is a tad messy.
@@ -297,8 +287,6 @@ end
 	@param key TKey
 ]=]
 function ObservableMap.Remove<TKey, TValue>(self: ObservableMap<TKey, TValue>, key: TKey): ()
-	assert(key ~= nil, "Bad key")
-
 	self:Set(key, nil)
 end
 

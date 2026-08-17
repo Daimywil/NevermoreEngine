@@ -19,8 +19,6 @@ local require = require(script.Parent.loader).load(script)
 
 local MaidTaskUtils = require("MaidTaskUtils")
 
-local ENABLE_STACK_TRACING = false
-
 local Subscription = {}
 Subscription.ClassName = "Subscription"
 Subscription.__index = Subscription
@@ -52,12 +50,10 @@ export type SubscriptionStateTypes = {
 	CANCELLED: "cancelled",
 }
 
-local SubscriptionStateTypes: SubscriptionStateTypes = table.freeze({
-	PENDING = "pending",
-	FAILED = "failed",
-	COMPLETE = "complete",
-	CANCELLED = "cancelled",
-} :: SubscriptionStateTypes)
+local STATE_PENDING: "pending" = "pending"
+local STATE_FAILED: "failed" = "failed"
+local STATE_COMPLETE: "complete" = "complete"
+local STATE_CANCELLED: "cancelled" = "cancelled"
 
 --[=[
 	Constructs a new Subscription
@@ -74,14 +70,8 @@ function Subscription.new<T...>(
 	completeCallback: CompleteCallback?,
 	observableSource: string?
 ): Subscription<T...>
-	assert(type(fireCallback) == "function" or fireCallback == nil, "Bad fireCallback")
-	assert(type(failCallback) == "function" or failCallback == nil, "Bad failCallback")
-	assert(type(completeCallback) == "function" or completeCallback == nil, "Bad completeCallback")
-
 	return setmetatable({
-		_state = SubscriptionStateTypes.PENDING,
-		_source = if ENABLE_STACK_TRACING then debug.traceback("Subscription.new()", 3) else nil,
-		_observableSource = observableSource,
+		_state = STATE_PENDING,
 		_fireCallback = fireCallback,
 		_failCallback = failCallback,
 		_completeCallback = completeCallback,
@@ -94,11 +84,12 @@ end
 	@param ... any
 ]=]
 function Subscription.Fire<T...>(self: Subscription<T...>, ...: T...)
-	if self._state == SubscriptionStateTypes.PENDING then
-		if self._fireCallback then
-			self._fireCallback(...)
+	if self._state == STATE_PENDING then
+		local fireCallback = self._fireCallback
+		if fireCallback then
+			fireCallback(...)
 		end
-	elseif self._state == SubscriptionStateTypes.CANCELLED then
+	elseif self._state == STATE_CANCELLED then
 		if self._fireCountAfterDeath then
 			self._fireCountAfterDeath += 1
 		else
@@ -116,11 +107,6 @@ function Subscription.Fire<T...>(self: Subscription<T...>, ...: T...)
 					2
 				)
 			)
-
-			if ENABLE_STACK_TRACING then
-				print(self._observableSource)
-				print(self._source)
-			end
 		end
 	end
 end
@@ -130,11 +116,11 @@ end
 	@param ... any
 ]=]
 function Subscription.Fail<T...>(self: Subscription<T...>, ...: any)
-	if self._state ~= SubscriptionStateTypes.PENDING then
+	if self._state ~= STATE_PENDING then
 		return
 	end
 
-	self._state = SubscriptionStateTypes.FAILED
+	self._state = STATE_FAILED
 
 	if self._failCallback then
 		self._failCallback(...)
@@ -205,11 +191,11 @@ end
 	@param ... any
 ]=]
 function Subscription.Complete<T...>(self: Subscription<T...>, ...)
-	if self._state ~= SubscriptionStateTypes.PENDING then
+	if self._state ~= STATE_PENDING then
 		return
 	end
 
-	self._state = SubscriptionStateTypes.COMPLETE
+	self._state = STATE_COMPLETE
 	if self._completeCallback then
 		self._completeCallback(...)
 	end
@@ -222,22 +208,16 @@ end
 	@return boolean
 ]=]
 function Subscription.IsPending<T...>(self: Subscription<T...>): boolean
-	return self._state == SubscriptionStateTypes.PENDING
+	return self._state == STATE_PENDING
 end
 
 function Subscription._assignCleanup<T...>(self: Subscription<T...>, cleanupTask: MaidTaskUtils.MaidTask?)
-	assert(self._cleanupTask == nil, "Already have _cleanupTask")
-
-	if MaidTaskUtils.isValidTask(cleanupTask) then
-		if self._state ~= SubscriptionStateTypes.PENDING then
-			MaidTaskUtils.doTask(cleanupTask)
-			return
-		end
-
-		self._cleanupTask = cleanupTask
-	elseif cleanupTask ~= nil then
-		error("Bad cleanup cleanupTask")
+	if self._state ~= STATE_PENDING then
+		MaidTaskUtils.doTask(cleanupTask)
+		return
 	end
+
+	self._cleanupTask = cleanupTask
 end
 
 function Subscription._doCleanup<T...>(self: Subscription<T...>)
@@ -246,9 +226,7 @@ function Subscription._doCleanup<T...>(self: Subscription<T...>)
 		self._cleanupTask = nil
 
 		-- The validity can change
-		if MaidTaskUtils.isValidTask(cleanupTask) then
-			MaidTaskUtils.doTask(cleanupTask)
-		end
+		MaidTaskUtils.doTask(cleanupTask)
 	end
 
 	self._fireCallback = nil
@@ -265,8 +243,8 @@ end
 	:::
 ]=]
 function Subscription.Destroy<T...>(self: Subscription<T...>)
-	if self._state == SubscriptionStateTypes.PENDING then
-		self._state = SubscriptionStateTypes.CANCELLED
+	if self._state == STATE_PENDING then
+		self._state = STATE_CANCELLED
 	end
 
 	self:_doCleanup()

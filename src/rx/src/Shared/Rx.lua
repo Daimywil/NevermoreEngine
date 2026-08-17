@@ -210,11 +210,8 @@ end
 	@return Observable
 ]=]
 function Rx.merge<T...>(observables: { Observable.Observable<T...> }): Observable.Observable<T...>
-	assert(type(observables) == "table", "Bad observables")
-
 	local totalCount = 0
 	for _, item in observables do
-		assert(Observable.isObservable(item), "Not an observable")
 		totalCount = totalCount + 1
 	end
 
@@ -309,13 +306,7 @@ function Rx.tap<T...>(
 	onError: Subscription.FailCallback?,
 	onComplete: Subscription.CompleteCallback?
 ): Observable.Transformer<T..., T...>
-	assert(type(onFire) == "function" or onFire == nil, "Bad onFire")
-	assert(type(onError) == "function" or onError == nil, "Bad onError")
-	assert(type(onComplete) == "function" or onComplete == nil, "Bad onComplete")
-
 	return function(source)
-		assert(Observable.isObservable(source), "Bad observable")
-
 		return Observable.new(function(sub)
 			return source:Subscribe(function(...)
 				if onFire then
@@ -622,11 +613,7 @@ end
 	@return (source: Observable) -> Observable
 ]=]
 function Rx.startWith<T, U>(values: { U }): Observable.Transformer<(T), (T | U)>
-	assert(type(values) == "table", "Bad values")
-
 	return function(source)
-		assert(Observable.isObservable(source), "Bad observable")
-
 		return Observable.new(function(sub)
 			for _, item in values do
 				sub:Fire(item)
@@ -720,8 +707,6 @@ end
 ]=]
 function Rx.defaultsTo(value)
 	return function(source)
-		assert(Observable.isObservable(source), "Bad observable")
-
 		return Observable.new(function(sub)
 			local maid = Maid.new()
 
@@ -821,11 +806,7 @@ end
 	@return (source: Observable<T>) -> Observable<T>
 ]=]
 function Rx.where<T...>(predicate: Predicate<T...>): Observable.Transformer<T..., T...>
-	assert(type(predicate) == "function", "Bad predicate callback")
-
 	return function(source: Observable.Observable<T...>)
-		assert(Observable.isObservable(source), "Bad observable")
-
 		return Observable.new(function(sub)
 			return source:Subscribe(function(...)
 				if predicate(...) then
@@ -850,8 +831,6 @@ end
 ]=]
 function Rx.distinct<T...>(): Observable.Transformer<T..., T...>
 	return function(source)
-		assert(Observable.isObservable(source), "Bad observable")
-
 		return Observable.new(function(sub)
 			local last = UNSET_VALUE
 
@@ -903,11 +882,7 @@ end
 	@return (source: Observable<T>) -> Observable<U>
 ]=]
 function Rx.map<T..., U...>(project: (T...) -> U...): Observable.Transformer<T..., U...>
-	assert(type(project) == "function", "Bad project callback")
-
 	return function(source)
-		assert(Observable.isObservable(source), "Bad observable")
-
 		return Observable.new(function(sub)
 			return source:Subscribe(function(...)
 				sub:Fire(project(...))
@@ -961,11 +936,7 @@ end
 	@return (source: Observable<T>) -> Observable<U>
 ]=]
 function Rx.flatMap<T..., U...>(project: (T...) -> Observable.Observable<U...>): Observable.Transformer<(T...), (U...)>
-	assert(type(project) == "function", "Bad project")
-
 	return function(source: Observable.Observable<T...>)
-		assert(Observable.isObservable(source), "Bad observable")
-
 		return Observable.new(function(sub: Subscription.Subscription<U...>)
 			local isComplete: boolean = false
 			local pendingCount: number = 0
@@ -979,7 +950,6 @@ function Rx.flatMap<T..., U...>(project: (T...) -> Observable.Observable<U...>):
 
 			local function onNextObservable(...: T...)
 				local observable: Observable.Observable<U...> = project(...)
-				assert(Observable.isObservable(observable), "Bad observable returned from subscription project call")
 
 				if not sub:IsPending() then
 					-- Projecting last subscription cancelled us
@@ -1119,11 +1089,7 @@ end
 	@return Observable
 ]=]
 function Rx.switchMap<T..., U...>(project: (T...) -> Observable.Observable<U...>): Observable.Transformer<(T...), (U...)>
-	assert(type(project) == "function", "Bad project")
-
 	return function(source: Observable.Observable<T...>)
-		assert(Observable.isObservable(source), "Bad observable")
-
 		return Observable.new(function(sub: Subscription.Subscription<U...>)
 			local isComplete: boolean = false
 			local insideComplete: boolean = false
@@ -1141,7 +1107,6 @@ function Rx.switchMap<T..., U...>(project: (T...) -> Observable.Observable<U...>
 				insideComplete = false
 
 				local observable: Observable.Observable<U...> = project(...)
-				assert(Observable.isObservable(observable), "Bad observable returned from subscription project call")
 
 				-- Handle cancellation when external callers do weird state stuff
 				if not outerIndex then
@@ -1464,8 +1429,6 @@ end
 	@return Observable<{ [TKey]: TEmitted }>
 ]=]
 function Rx.combineLatest<K, V>(observables: Map<K, Observable.Observable<V> | V>): Observable.Observable<Map<K, V>>
-	assert(type(observables) == "table", "Bad observables")
-
 	return Observable.new(function(sub)
 		local unset = 0
 		local latest: Map<K, V> = {}
@@ -1843,8 +1806,6 @@ end
 	@return (source: Observable<number>) -> Observable<number>
 ]=]
 function Rx.interval(seconds: number)
-	assert(type(seconds) == "number", "Bad seconds")
-
 	return Rx.timer(0, seconds)
 end
 
@@ -1966,8 +1927,6 @@ end
 ]=]
 function Rx.throttleDefer<T...>(): Observable.Transformer<T..., T...>
 	return function(source)
-		assert(Observable.isObservable(source), "Bad observable")
-
 		return Observable.new(function(sub)
 			local lastResult: any = nil
 			local currentQueue: thread? = nil

@@ -77,9 +77,6 @@ function RxBrioUtils.completeOnDeath<T...>(
 	brio: Brio.Brio<...any>,
 	observable: Observable.Observable<T...>
 ): Observable.Observable<T...>
-	assert(Brio.isBrio(brio))
-	assert(Observable.isObservable(observable))
-
 	return Observable.new(function(sub)
 		if brio:IsDead() then
 			sub:Complete()
@@ -326,13 +323,11 @@ end
 	@return (source: Observable<Brio<T>>) -> Observable<Brio<T>>
 ]=]
 function RxBrioUtils.where<T>(predicate: Rx.Predicate<T>)
-	assert(type(predicate) == "function", "Bad predicate")
 	return function(source)
 		return Observable.new(function(sub)
 			local maid = Maid.new()
 
 			maid:GiveTask(source:Subscribe(function(brio)
-				assert(Brio.isBrio(brio), "Not a brio")
 				if brio:IsDead() then
 					return
 				end
@@ -638,17 +633,12 @@ end
 	@return (Brio<TBrio>) -> Brio<TProject>
 ]=]
 function RxBrioUtils.mapBrioBrio(project)
-	assert(type(project) == "function", "Bad project")
-
 	return function(brio)
-		assert(Brio.isBrio(brio), "Not a brio")
-
 		if brio:IsDead() then
 			return Rx.EMPTY
 		end
 
 		local observable = project(brio:GetValue())
-		assert(Observable.isObservable(observable), "Not an observable")
 
 		return RxBrioUtils.completeOnDeath(brio, observable):Pipe({
 			Rx.map(RxBrioUtils._mapResult(brio)) :: any,
@@ -771,8 +761,6 @@ end
 	@within RxBrioUtils
 ]=]
 function RxBrioUtils.switchToBrio<T>(predicate: Rx.Predicate<T>?)
-	assert(type(predicate) == "function" or predicate == nil, "Bad predicate")
-
 	return function(source)
 		return Observable.new(function(sub)
 			local brio
