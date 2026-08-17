@@ -82,7 +82,7 @@ function TiePropertyImplementation._updateImplementation(
 	implementation
 )
 	if ValueObject.isValueObject(implementation) then
-		local checkType = implementation:GetCheckType()
+		local checkType = nil
 
 		if checkType and AttributeUtils.isValidAttributeType(checkType) and checkType ~= "nil" then
 			self:_removeClassIfNeeded()

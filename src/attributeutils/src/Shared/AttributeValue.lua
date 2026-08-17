@@ -53,9 +53,6 @@ export type AttributeValue<T> = typeof(setmetatable(
 	@return AttributeValue<T>
 ]=]
 function AttributeValue.new<T>(object: Instance, attributeName: string, defaultValue: T): AttributeValue<T>
-	assert(typeof(object) == "Instance", "Bad object")
-	assert(type(attributeName) == "string", "Bad attributeName")
-
 	local self = {
 		_object = object,
 		_attributeName = attributeName,
@@ -63,7 +60,7 @@ function AttributeValue.new<T>(object: Instance, attributeName: string, defaultV
 	}
 
 	if defaultValue ~= nil and self._object:GetAttribute(self._attributeName) == nil then
-		self._object:SetAttribute(rawget(self, "_attributeName") :: string, defaultValue)
+		self._object:SetAttribute(attributeName, defaultValue)
 	end
 
 	return setmetatable(self, AttributeValue) :: any

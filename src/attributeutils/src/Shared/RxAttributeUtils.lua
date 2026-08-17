@@ -28,9 +28,6 @@ function RxAttributeUtils.observeAttribute<T>(
 	attributeName: string,
 	defaultValue: T?
 ): Observable.Observable<T>
-	assert(typeof(instance) == "Instance", "Bad instance")
-	assert(type(attributeName) == "string", "Bad attributeName")
-
 	return Observable.new(function(sub)
 		local function handleAttributeChanged()
 			local attributeValue = instance:GetAttribute(attributeName)
@@ -54,8 +51,6 @@ end
 	@return Observable<Brio<string>>
 ]=]
 function RxAttributeUtils.observeAttributeKeysBrio(instance: Instance): Observable.Observable<Brio.Brio<string>>
-	assert(typeof(instance) == "Instance", "Bad instance")
-
 	return Observable.new(function(sub)
 		local maid = Maid.new()
 
@@ -102,8 +97,6 @@ end
 	@return Observable<string>
 ]=]
 function RxAttributeUtils.observeAttributeKeys(instance: Instance): Observable.Observable<string>
-	assert(typeof(instance) == "Instance", "Bad instance")
-
 	return Observable.new(function(sub)
 		local maid = Maid.new()
 
@@ -135,9 +128,6 @@ function RxAttributeUtils.observeAttributeBrio<T>(
 	attributeName: string,
 	condition: Rx.Predicate<T>?
 ): Observable.Observable<Brio.Brio<T>>
-	assert(typeof(instance) == "Instance", "Bad instance")
-	assert(type(attributeName) == "string", "Bad attributeName")
-
 	return Observable.new(function(sub)
 		local lastBrio
 		local lastValue = UNSET_VALUE
