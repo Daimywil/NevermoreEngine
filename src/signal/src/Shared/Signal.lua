@@ -44,9 +44,32 @@
 	@class GoodSignal
 ]=]
 
-local require = require(script.Parent.loader).load(script)
+-- Function which acquires the currently idle handler runner thread, runs the
+-- function fn on it, and then releases the thread, returning it to being the
+-- currently idle one.
+-- If there was a currently idle runner thread already, that's okay, that old
+-- one will just get thrown and eventually GCed.
+local function acquireRunnerThreadAndCallEventHandler(fn, ...)
+	local acquiredRunnerThread = freeRunnerThread
+	freeRunnerThread = nil
+	fn(...)
+	-- The handler finished running, this runner thread is free again.
+	freeRunnerThread = acquiredRunnerThread
+end
 
-local EventHandlerUtils = require("EventHandlerUtils")
+-- Coroutine runner that we create coroutines of. The coroutine can be
+-- repeatedly resumed with functions to run followed by the argument to run
+-- them with.
+local function runEventHandlerInFreeThread()
+	-- Note: We cannot use the initial set of arguments passed to
+	-- runEventHandlerInFreeThread for a call to the handler, because those
+	-- arguments would stay on the stack for the duration of the thread's
+	-- existence, temporarily leaking references. Without access to raw bytecode
+	-- there's no way for us to clear the "..." references from the stack.
+	while true do
+		acquireRunnerThreadAndCallEventHandler(coroutine.yield())
+	end
+end
 
 --[=[
 	A connection to a signal.
@@ -61,7 +84,6 @@ export type SignalHandler<T...> = (T...) -> ()
 
 export type Connection<T...> = typeof(setmetatable(
 	{} :: {
-		_memoryCategory: string,
 		_signal: Signal<T...>?,
 		_fn: SignalHandler<T...>?,
 	},
@@ -77,8 +99,6 @@ export type Connection<T...> = typeof(setmetatable(
 ]=]
 function Connection.new<T...>(signal: Signal<T...>, fn: SignalHandler<T...>): Connection<T...>
 	return setmetatable({
-		-- selene: allow(incorrect_standard_library_use)
-		_memoryCategory = debug.getmemorycategory(),
 		_signal = signal,
 		_fn = fn,
 	}, Connection) :: any
@@ -226,7 +246,6 @@ function Signal.DisconnectAll<T...>(self: Signal<T...>): ()
 	while self._handlerListHead do
 		local last = self._handlerListHead
 		last:Disconnect()
-		assert(self._handlerListHead ~= last, "self._handlerListHead should not be last")
 	end
 
 	self._handlerListHead = false
@@ -252,8 +271,13 @@ function Signal.Fire<T...>(self: Signal<T...>, ...: T...): ()
 		-- in this round. Any disconnections in the chain will still work here.
 		local nextNode = rawget(connection, "_next")
 
-		if rawget(connection, "_signal") ~= nil then -- isConnected
-			EventHandlerUtils.fire(connection._memoryCategory, connection._fn, ...)
+		if rawget(connection, "_signal") then -- isConnected
+			if not freeRunnerThread then
+				freeRunnerThread = coroutine.create(runEventHandlerInFreeThread)
+				-- Get the freeRunnerThread to the first yield
+				coroutine.resume(freeRunnerThread)
+			end
+			task.spawn(freeRunnerThread, connection._fn, ...)
 		end
 
 		connection = nextNode
