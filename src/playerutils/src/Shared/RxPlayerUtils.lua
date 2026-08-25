@@ -24,8 +24,6 @@ local RxPlayerUtils = {}
 	@return Observable<Brio<Player>>
 ]=]
 function RxPlayerUtils.observePlayersBrio(predicate: Rx.Predicate<Player>?): Observable.Observable<Brio.Brio<Player>>
-	assert(type(predicate) == "function" or predicate == nil, "Bad predicate!")
-
 	return Observable.new(function(sub)
 		local brios = {}
 
@@ -111,8 +109,6 @@ end
 	@return Observable<Player>
 ]=]
 function RxPlayerUtils.observePlayers(predicate: Rx.Predicate<Player>?): Observable.Observable<Player>
-	assert(type(predicate) == "function" or predicate == nil, "Bad predicate")
-
 	return Observable.new(function(sub)
 		local function OnPlayerAdded(player: Player)
 			if not predicate or predicate(player) then
@@ -137,8 +133,6 @@ end
 	@return Observable<()>
 ]=]
 function RxPlayerUtils.observeFirstAppearanceLoaded(player: Player): Observable.Observable<()>
-	assert(typeof(player) == "Instance", "Bad player")
-
 	return Observable.new(function(sub)
 		if player:HasAppearanceLoaded() then
 			sub:Fire()

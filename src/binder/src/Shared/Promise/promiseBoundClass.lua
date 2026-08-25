@@ -20,8 +20,5 @@ local Promise = require("Promise")
 	@within promiseBoundClass
 ]=]
 return function<T>(binder: Binder.Binder<T>, inst: Instance, cancelToken: CancelToken.CancelToken?): Promise.Promise<T>
-	assert(Binder.isBinder(binder), "'binder' must be table")
-	assert(typeof(inst) == "Instance", "'inst' must be instance")
-
 	return binder:Promise(inst, cancelToken)
 end

@@ -194,8 +194,6 @@ end
 	@return Observable<Brio<T>>
 ]=]
 function ValueObject.ObserveBrio<T>(self: ValueObject<T>, condition: Rx.Predicate<T>?): Observable.Observable<Brio.Brio<T>>
-	assert(type(condition) == "function" or condition == nil, "Bad condition")
-
 	return Observable.new(function(sub)
 		if not self.Destroy then
 			warn("[ValueObject.observeValue] - Connecting to dead ValueObject")

@@ -91,9 +91,6 @@ end
 	@return Promise<T...>
 ]=]
 function Promise.delay<T...>(seconds: number, func: ResolveReject<T...>): Promise<T...>
-	assert(type(seconds) == "number", "Bad seconds")
-	assert(type(func) == "function", "Bad func")
-
 	local self = Promise.new()
 
 	task.delay(seconds, func, self:_getResolveReject())

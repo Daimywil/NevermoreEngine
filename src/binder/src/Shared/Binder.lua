@@ -105,12 +105,10 @@ export type Binder<T> = typeof(setmetatable(
 	@return Binder<T>
 ]=]
 function Binder.new<T>(tagName: string, constructor: BinderConstructor<T>, ...): Binder<T>
-	assert(type(tagName) == "string", "Bad tagName")
-
 	local self: Binder<T> = setmetatable({} :: any, Binder)
 
-	self._tagName = assert(tagName, "Bad argument 'tagName', expected string")
-	self._constructor = assert(constructor, "Bad argument 'constructor', expected table or function")
+	self._tagName = tagName
+	self._constructor = constructor
 	self._defaultClassType = "Folder"
 	self.ServiceName = self._tagName .. "Binder"
 
@@ -253,8 +251,6 @@ end
 	@return Observable<T?>
 ]=]
 function Binder.Observe<T>(self: Binder<T>, instance: Instance): Observable.Observable<T?>
-	assert(typeof(instance) == "Instance", "Bad instance")
-
 	return Observable.new(function(sub)
 		local maid = Maid.new()
 
@@ -344,8 +340,6 @@ end
 	@return Observable<Brio<T>>
 ]=]
 function Binder.ObserveBrio<T>(self: Binder<T>, instance: Instance): Observable.Observable<Brio.Brio<T>>
-	assert(typeof(instance) == "Instance", "Bad instance")
-
 	return Observable.new(function(sub)
 		local lastBrio
 
@@ -388,9 +382,6 @@ end
 	@return function -- Cleanup function
 ]=]
 function Binder.ObserveInstance<T>(self: Binder<T>, inst: Instance, callback: (T?) -> ()): () -> ()
-	assert(typeof(inst) == "Instance", "Bad inst")
-	assert(type(callback) == "function", "Bad callback")
-
 	self._listeners[inst] = self._listeners[inst] or {}
 	self._listeners[inst][callback] = true
 
@@ -548,8 +539,6 @@ end
 	@param inst Instance
 ]=]
 function Binder.Tag<T>(self: Binder<T>, inst: Instance)
-	assert(typeof(inst) == "Instance", "Bad inst")
-
 	CollectionService:AddTag(inst, self._tagName)
 end
 
@@ -559,8 +548,6 @@ end
 	@param inst Instance
 ]=]
 function Binder.HasTag<T>(self: Binder<T>, inst: Instance): boolean
-	assert(typeof(inst) == "Instance", "Bad inst")
-
 	return CollectionService:HasTag(inst, self._tagName)
 end
 
@@ -570,8 +557,6 @@ end
 	@param inst Instance
 ]=]
 function Binder.Untag<T>(self: Binder<T>, inst: Instance)
-	assert(typeof(inst) == "Instance", "Bad inst")
-
 	CollectionService:RemoveTag(inst, self._tagName)
 end
 
@@ -582,8 +567,6 @@ end
 	@param inst Instance -- Instance to unbind
 ]=]
 function Binder.Unbind<T>(self: Binder<T>, inst: Instance)
-	assert(typeof(inst) == "Instance", "Bad inst'")
-
 	if RunService:IsClient() then
 		warn(
 			string.format(
@@ -625,7 +608,6 @@ end
 	@param inst Instance -- Instance to unbind
 ]=]
 function Binder.UnbindClient<T>(self: Binder<T>, inst: Instance)
-	assert(typeof(inst) == "Instance", "Bad inst")
 	CollectionService:RemoveTag(inst, self._tagName)
 end
 
@@ -636,7 +618,6 @@ end
 	@return T?
 ]=]
 function Binder.Get<T>(self: Binder<T>, inst: Instance): T?
-	assert(typeof(inst) == "Instance", "Argument 'inst' is not an Instance")
 	return self._instToClass[inst]
 end
 
@@ -648,8 +629,6 @@ end
 	@return Promise<T>
 ]=]
 function Binder.Promise<T>(self: Binder<T>, inst: Instance, cancelToken: CancelToken.CancelToken?): Promise.Promise<T>
-	assert(typeof(inst) == "Instance", "Argument 'inst' is not an Instance")
-
 	local class = self:Get(inst)
 	if class then
 		return Promise.resolved(class)
@@ -697,8 +676,6 @@ end
 	@return Instance
 ]=]
 function Binder.Create<T>(self: Binder<T>, className: string): Instance
-	assert(type(className) == "string" or className == nil, "Bad className")
-
 	local instance = Instance.new(className or self._defaultClassType)
 	instance.Name = self._tagName
 	instance.Archivable = false
@@ -709,8 +686,6 @@ function Binder.Create<T>(self: Binder<T>, className: string): Instance
 end
 
 function Binder._add<T>(self: Binder<T>, inst: Instance)
-	assert(typeof(inst) == "Instance", "Argument 'inst' is not an Instance")
-
 	if self._instToClass[inst] then
 		-- https://devforum.roblox.com/t/double-firing-of-collectionservice-getinstanceaddedsignal-when-applying-tag/244235
 		return
@@ -747,7 +722,6 @@ function Binder._add<T>(self: Binder<T>, inst: Instance)
 	end
 
 	self._pendingInstSet[inst] = nil
-	assert(self._instToClass[inst] == nil, "Overwrote")
 
 	class = class or {} :: any
 

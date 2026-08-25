@@ -20,8 +20,6 @@ local BrioUtils = {}
 	@return Brio<T>
 ]=]
 function BrioUtils.clone<T...>(brio: Brio.Brio<T...>): Brio.Brio<T...>
-	assert(brio, "Bad brio")
-
 	if brio:IsDead() then
 		return Brio.DEAD :: any
 	end
@@ -147,8 +145,6 @@ end
 	@return Brio<U>
 ]=]
 function BrioUtils.withOtherValues<T..., U...>(brio: Brio.Brio<T...>, ...: U...): Brio.Brio<U...>
-	assert(brio, "Bad brio")
-
 	if brio:IsDead() then
 		return Brio.DEAD :: any
 	end
@@ -246,9 +242,6 @@ end
 	@return Brio<{T | U}>
 ]=]
 function BrioUtils.merge<T, U>(brio: Brio.Brio<T>, otherBrio: Brio.Brio<U>): Brio.Brio<T & U>
-	assert(Brio.isBrio(brio), "Not a brio")
-	assert(Brio.isBrio(otherBrio), "Not a brio")
-
 	if brio:IsDead() or otherBrio:IsDead() then
 		return Brio.DEAD :: any
 	end

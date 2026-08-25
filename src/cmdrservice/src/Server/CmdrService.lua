@@ -52,9 +52,8 @@ local GLOBAL_REGISTRY = setmetatable({}, { __mode = "kv" })
 	@param serviceBag ServiceBag
 ]=]
 function CmdrService.Init(self: CmdrService, serviceBag: ServiceBag.ServiceBag)
-	assert(not (self :: any)._serviceBag, "Already initialized")
 	self._maid = Maid.new()
-	self._serviceBag = assert(serviceBag, "No serviceBag")
+	self._serviceBag = serviceBag
 
 	-- External
 	self._permissionService = self._serviceBag:GetService(PermissionService)
@@ -173,14 +172,10 @@ end
 	@return Promise<Cmdr>
 ]=]
 function CmdrService.PromiseCmdr(self: CmdrService)
-	assert(self._promiseCmdr, "Not initialized")
-
 	return self._promiseCmdr
 end
 
 function CmdrService.RegisterDefaultCommands(self: CmdrService, ...): ()
-	assert((self :: any)._promiseCmdr, "Not initialized")
-
 	local args = { ... }
 
 	self._promiseCmdr:Then(function(cmdr)
@@ -198,10 +193,6 @@ function CmdrService.SetGroupCommandPermissions(
 		}
 	}
 ): ()
-	assert((self :: any)._promiseCmdr, "Not initialized")
-	assert(type(groupId) == "number", "Bad groupId")
-	assert(type(permissions) == "table", "Bad permissions")
-
 	if self._groupCommandPermissions ~= nil then
 		error("Group command permissions have already been set")
 	end
@@ -220,11 +211,6 @@ function CmdrService.RegisterCommand(
 	commandData: CmdrTypes.CommandDefinition,
 	execute: (context: CmdrTypes.CommandContext, ...any) -> string?
 ): ()
-	assert((self :: any)._promiseCmdr, "Not initialized")
-	assert(commandData, "No commandData")
-	assert(commandData.Name, "No commandData.Name")
-	assert(execute, "No execute")
-
 	local commandId = string.format("%s_%s", commandData.Name, HttpService:GenerateGUID(false))
 
 	self._definitionData[commandId] = commandData
@@ -268,9 +254,6 @@ end
 	@private
 ]=]
 function CmdrService.__executeCommand(self: CmdrService, cmdrCommandId: string, ...): string?
-	assert(type(cmdrCommandId) == "string", "Bad cmdrCommandId")
-	assert(self._promiseCmdr, "CmdrService is not initialized yet")
-
 	local execute = self._executeData[cmdrCommandId]
 	if not execute then
 		error(string.format("[CmdrService] - No command definition for cmdrCommandId %q", tostring(cmdrCommandId)))
@@ -287,8 +270,6 @@ end
 	@private
 ]=]
 function CmdrService.__getServiceFromId(_self: CmdrService, cmdrServiceId: string)
-	assert(type(cmdrServiceId) == "string", "Bad cmdrServiceId")
-
 	return GLOBAL_REGISTRY[cmdrServiceId]
 end
 

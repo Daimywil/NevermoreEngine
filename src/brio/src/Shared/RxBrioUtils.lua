@@ -450,8 +450,6 @@ end
 	@return (source: Observable<Brio<TBrio>>) -> Observable<Brio<TResult>>
 ]=]
 function RxBrioUtils.switchMapBrio(project)
-	assert(type(project) == "function", "Bad project")
-
 	return Rx.switchMap(RxBrioUtils.mapBrioBrio(project) :: any)
 end
 
