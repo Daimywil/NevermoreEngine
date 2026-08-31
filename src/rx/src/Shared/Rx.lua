@@ -210,31 +210,34 @@ end
 	@return Observable
 ]=]
 function Rx.merge<T...>(observables: { Observable.Observable<T...> }): Observable.Observable<T...>
-	local totalCount = 0
-	for _, item in observables do
-		totalCount = totalCount + 1
-	end
-
 	return Observable.new(function(sub)
-		local maid = Maid.new()
-		local pendingCount = totalCount
+		local pendingCount = #observables
+
+		local subscriptions = table.create(pendingCount)
 
 		for _, observable: any in observables do
-			maid:GiveTask(observable:Subscribe(function(...)
-				sub:Fire(...)
-			end, function(...)
-				pendingCount = pendingCount - 1
-				sub:Fail(...)
-			end, function()
-				-- Only complete once all are complete
-				pendingCount = pendingCount - 1
-				if pendingCount == 0 then
-					sub:Complete()
-				end
-			end))
+			table.insert(
+				subscriptions,
+				observable:Subscribe(function(...)
+					sub:Fire(...)
+				end, function(...)
+					pendingCount = pendingCount - 1
+					sub:Fail(...)
+				end, function()
+					-- Only complete once all are complete
+					pendingCount = pendingCount - 1
+					if pendingCount == 0 then
+						sub:Complete()
+					end
+				end)
+			)
 		end
 
-		return maid
+		return function()
+			for _, subscription in subscriptions do
+				subscription:Destroy()
+			end
+		end
 	end)
 end
 
