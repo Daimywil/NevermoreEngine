@@ -1,4 +1,5 @@
 --!strict
+local Subscription = require(script.Parent.Parent.Parent.rx.Shared.Subscription)
 --[=[
 	A list that can be observed for blend and other components
 	@class ObservableMap
@@ -181,6 +182,102 @@ end
 ]=]
 function ObservableMap.ContainsKey<TKey, TValue>(self: ObservableMap<TKey, TValue>, key: TKey): boolean
 	return self._map[key] ~= nil
+end
+
+function ObservableMap.ObserveContainsKey<TKey, TValue>(self: ObservableMap<TKey, TValue>, key: TKey)
+	return Observable.new(function(sub)
+		local lastEmit: boolean?
+
+		local function OnChanged()
+			local containsKey = self._map[key] ~= nil
+			if containsKey ~= lastEmit then
+				return
+			end
+
+			lastEmit = containsKey
+
+			sub:Fire(containsKey)
+		end
+
+		local addedConnection = self.KeyAdded:Connect(function(addedKey)
+			if addedKey ~= key then
+				return
+			end
+
+			OnChanged()
+		end)
+
+		local removedConnection = self.KeyRemoved:Connect(function(removedKey)
+			if removedKey ~= key then
+				return
+			end
+
+			OnChanged()
+		end)
+
+		OnChanged()
+
+		return function()
+			addedConnection:Disconnect()
+			removedConnection:Disconnect()
+		end
+	end)
+end
+
+function ObservableMap.ObserveContainsKeyBrio<TKey, TValue>(self: ObservableMap<TKey, TValue>, key: TKey, state: boolean?)
+	return Observable.new(function(sub)
+		local lastEmit: boolean?
+		local lastBrio: Brio.Brio<boolean>?
+
+		local function OnChanged()
+			local containsKey = self._map[key] ~= nil
+			if containsKey ~= lastEmit then
+				return
+			end
+
+			lastEmit = containsKey
+
+			if lastBrio then
+				lastBrio:Destroy()
+				lastBrio = nil
+			end
+
+			if state ~= nil and state ~= containsKey then
+				return
+			end
+
+			lastBrio = Brio.new(containsKey)
+			sub:Fire(lastBrio)
+		end
+
+		local addedConnection = self.KeyAdded:Connect(function(addedKey)
+			if addedKey ~= key then
+				return
+			end
+
+			OnChanged()
+		end)
+
+		local removedConnection = self.KeyRemoved:Connect(function(removedKey)
+			if removedKey ~= key then
+				return
+			end
+
+			OnChanged()
+		end)
+
+		OnChanged()
+
+		return function()
+			addedConnection:Disconnect()
+			removedConnection:Disconnect()
+
+			if lastBrio then
+				lastBrio:Destroy()
+				lastBrio = nil
+			end
+		end
+	end)
 end
 
 --[=[

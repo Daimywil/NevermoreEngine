@@ -16,7 +16,11 @@ type ObservableMap<TKey, TValue> = {
   ObserveValuesBrio(): Observable<Brio<TValue>>;
   ObservePairsBrio(): Observable<Brio<LuaTuple<[key: TKey, value: TValue]>>>;
   Get(key: TKey): TValue | undefined;
+
   ContainsKey(key: TKey): boolean;
+  ObserveContainsKey(key: TKey): Observable<boolean>;
+  ObserveContainsKeyBrio(key: TKey, state?: boolean): Observable<Brio<boolean>>;
+
   GetCount(): number;
   ObserveCount(): Observable<number>;
   ObserveAtKeyBrio(key: TKey): Observable<Brio<TValue>>;
