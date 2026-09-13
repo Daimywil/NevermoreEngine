@@ -190,7 +190,7 @@ function ObservableMap.ObserveContainsKey<TKey, TValue>(self: ObservableMap<TKey
 
 		local function OnChanged()
 			local containsKey = self._map[key] ~= nil
-			if containsKey ~= lastEmit then
+			if containsKey == lastEmit then
 				return
 			end
 
@@ -231,7 +231,7 @@ function ObservableMap.ObserveContainsKeyBrio<TKey, TValue>(self: ObservableMap<
 
 		local function OnChanged()
 			local containsKey = self._map[key] ~= nil
-			if containsKey ~= lastEmit then
+			if containsKey == lastEmit then
 				return
 			end
 
