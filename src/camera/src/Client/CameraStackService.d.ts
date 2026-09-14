@@ -18,10 +18,7 @@ export interface CameraStackService {
   GetRawDefaultCamera(): DefaultCamera;
   GetTopCamera(): CameraLike;
   GetTopState(): CameraState | undefined;
-  GetNewStateBelow(): [
-    cameraEffect: CameraEffect,
-    setState: (state: CameraState) => void,
-  ];
+  GetNewStateBelow(): ReturnType<CameraStack['GetNewStateBelow']>;
   GetIndex(): number | undefined;
   GetRawStack(): CameraLike[];
   GetCameraStack(): CameraStack;
