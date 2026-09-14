@@ -31,9 +31,9 @@ export type CameraStackService = typeof(setmetatable(
 		_impulseCamera: ImpulseCamera.ImpulseCamera,
 		_defaultCamera: CameraEffectUtils.CameraEffect,
 		_key: string,
-		_serviceBag: ServiceBag.ServiceBag,
 		_started: boolean,
 		_doNotUseDefaultCamera: boolean,
+		_doNotAutomaticallySetCameraType: boolean?,
 	},
 	{} :: typeof({ __index = CameraStackService })
 ))
@@ -42,9 +42,6 @@ export type CameraStackService = typeof(setmetatable(
 	@param serviceBag ServiceBag
 ]=]
 function CameraStackService.Init(self: CameraStackService, serviceBag: ServiceBag.ServiceBag)
-	assert(ServiceBag.isServiceBag(serviceBag), "Not a valid service bag")
-	self._serviceBag = assert(serviceBag, "No serviceBag")
-
 	self._maid = Maid.new()
 	self._key = HttpService:GenerateGUID(false)
 
@@ -87,12 +84,14 @@ function CameraStackService.Start(self: CameraStackService): ()
 
 	-- TODO: Allow rebinding
 	if self._doNotUseDefaultCamera then
-		Workspace.CurrentCamera.CameraType = Enum.CameraType.Scriptable
-
-		-- TODO: Handle camera deleted too!
-		Workspace.CurrentCamera:GetPropertyChangedSignal("CameraType"):Connect(function()
+		if not self._doNotAutomaticallySetCameraType then
 			Workspace.CurrentCamera.CameraType = Enum.CameraType.Scriptable
-		end)
+
+			-- TODO: Handle camera deleted too!
+			Workspace.CurrentCamera:GetPropertyChangedSignal("CameraType"):Connect(function()
+				Workspace.CurrentCamera.CameraType = Enum.CameraType.Scriptable
+			end)
+		end
 	else
 		self._maid:GiveTask(self._rawDefaultCamera:BindToRenderStep())
 	end
@@ -106,6 +105,15 @@ function CameraStackService.SetDoNotUseDefaultCamera(self: CameraStackService, d
 	assert(not self._started, "Already started")
 
 	self._doNotUseDefaultCamera = doNotUseDefaultCamera
+end
+
+function CameraStackService.PreventAutomaticallySettingCameraType(
+	self: CameraStackService,
+	doNotUseDefaultCamera: boolean
+): ()
+	assert(not self._started, "Already started")
+
+	self._doNotAutomaticallySetCameraType = true
 end
 
 --[=[

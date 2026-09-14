@@ -10,6 +10,7 @@ export interface CameraStackService {
   Start(): void;
   GetRenderPriority(): number;
   SetDoNotUseDefaultCamera(doNotUseDefaultCamera: boolean): void;
+  PreventAutomaticallySettingCameraType(): void;
   PushDisable(): () => void;
   PrintCameraStack(): void;
   GetDefaultCamera(): CameraEffect;
@@ -19,7 +20,7 @@ export interface CameraStackService {
   GetTopState(): CameraState | undefined;
   GetNewStateBelow(): [
     cameraEffect: CameraEffect,
-    setState: (state: CameraState) => void
+    setState: (state: CameraState) => void,
   ];
   GetIndex(): number | undefined;
   GetRawStack(): CameraLike[];
