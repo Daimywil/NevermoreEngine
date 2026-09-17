@@ -13,7 +13,7 @@ export interface CameraStackService {
   PreventAutomaticallySettingCameraType(): void;
   PushDisable(): () => void;
   PrintCameraStack(): void;
-  GetDefaultCamera(): CameraEffect;
+  GetDefaultCamera(): DefaultCamera;
   GetImpulseCamera(): ImpulseCamera;
   GetRawDefaultCamera(): DefaultCamera;
   GetTopCamera(): CameraLike;
