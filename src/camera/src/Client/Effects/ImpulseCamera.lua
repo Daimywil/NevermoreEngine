@@ -55,10 +55,6 @@ end
 	@param damper number? -- Optional
 ]=]
 function ImpulseCamera.Impulse(self: ImpulseCamera, velocity: Vector3, speed: number?, damper: number?): ()
-	assert(typeof(velocity) == "Vector3", "Bad velocity")
-	assert(type(speed) == "number" or speed == nil, "Bad speed")
-	assert(type(damper) == "number" or damper == nil, "Bad damper")
-
 	local spring = self:_getSpring(speed, damper)
 	spring:Impulse(velocity)
 end
@@ -71,10 +67,6 @@ end
 	@param damper number? -- Optional
 ]=]
 function ImpulseCamera.ImpulseRandom(self: ImpulseCamera, velocity: Vector3, speed: number?, damper: number?): ()
-	assert(typeof(velocity) == "Vector3", "Bad velocity")
-	assert(type(speed) == "number" or speed == nil, "Bad speed")
-	assert(type(damper) == "number" or damper == nil, "Bad damper")
-
 	local randomVector = Vector3.new(2 * (math.random() - 0.5), 2 * (math.random() - 0.5), 2 * (math.random() - 0.5))
 
 	return self:Impulse(velocity * randomVector, speed, damper)
@@ -84,9 +76,6 @@ function ImpulseCamera._getSpring(self: ImpulseCamera, speed: number?, damper: n
 	if (not speed) and not damper then
 		return self._defaultSpring
 	end
-
-	assert(speed ~= nil, "Type checker needs assert")
-	assert(damper ~= nil, "Type checker needs assert")
 
 	speed = speed or self._defaultSpring.Speed
 	damper = damper or self._defaultSpring.Damper
