@@ -14,6 +14,7 @@ type ObservableList<T> = {
   ObserveIndexByKey(key: Symbol): Observable<number | undefined>;
   GetIndexByKey(key: Symbol): number | undefined;
   GetCount(): number;
+  Contains(item: T): boolean;
   ObserveCount(): Observable<number>;
   Add(item: T): () => void;
   Get(index: number): T | undefined;

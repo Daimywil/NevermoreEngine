@@ -459,6 +459,16 @@ function ObservableList.GetList<T>(self: ObservableList<T>): { T }
 	return list
 end
 
+function ObservableList.Contains<T>(self: ObservableList<T>, item: T): boolean
+	for key, value in self._contents do
+		if value == item then
+			return true
+		end
+	end
+
+	return false
+end
+
 --[=[
 	Cleans up the ObservableList and sets the metatable to nil.
 ]=]
