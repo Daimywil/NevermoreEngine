@@ -44,6 +44,8 @@
 	@class GoodSignal
 ]=]
 
+local freeRunnerThread: thread? = nil
+
 -- Function which acquires the currently idle handler runner thread, runs the
 -- function fn on it, and then releases the thread, returning it to being the
 -- currently idle one.
