@@ -173,7 +173,9 @@ function Maid.Add<T>(self: Maid, task: T): T
 		error("Task cannot be false or nil", 2)
 	end
 
-	self[#(self._tasks :: any) + 1] = task :: any
+	-- #tasks + 1 is always an empty slot, so there is nothing for __newindex to clean up
+	local tasks: any = self._tasks
+	tasks[#tasks + 1] = task
 
 	if type(task) == "table" and not task.Destroy then
 		warn("[Maid.Add] - Gave table task without .Destroy\n\n" .. debug.traceback())
@@ -194,8 +196,10 @@ function Maid.GiveTask(self: Maid, task: MaidTask): number
 		error("Task cannot be false or nil", 2)
 	end
 
-	local taskId = #(self._tasks :: any) + 1
-	self[taskId] = task
+	-- #tasks + 1 is always an empty slot, so there is nothing for __newindex to clean up
+	local tasks: any = self._tasks
+	local taskId = #tasks + 1
+	tasks[taskId] = task
 
 	if type(task) == "table" and not (task :: any).Destroy then
 		warn("[Maid.GiveTask] - Gave table task without .Destroy\n\n" .. debug.traceback())
@@ -256,35 +260,39 @@ function Maid.DoCleaning(self: Maid)
 		end
 	end
 
-	-- Clear out tasks table completely, even if clean up tasks add more tasks to the maid
-	local index, job = next(tasks)
-	while job ~= nil do
-		tasks[index] = nil
-		local jobType = typeof(job)
-		if jobType == "function" then
-			(job :: any)()
-		elseif jobType == "table" and type((job :: any).Destroy) == "function" then
-			(job :: any):Destroy()
-		elseif jobType == "Instance" then
-			job:Destroy()
-		elseif jobType == "thread" then
-			local cancelled
-			if coroutine.running() ~= job then
-				cancelled = pcall(function()
-					task.cancel(job)
-				end)
-			end
+	-- Clear out tasks table completely, even if clean up tasks add more tasks to the maid.
+	-- Iterate in place instead of calling next(tasks) after each task: next() without a key
+	-- scans from the start of the table past every cleared slot, which is O(n^2).
+	-- Each slot is cleared before its task runs, so a task can never run twice, and the outer
+	-- loop picks up any tasks that were added behind the iterator while cleaning.
+	while next(tasks) ~= nil do
+		for index, job in tasks do
+			tasks[index] = nil
+			local jobType = typeof(job)
+			if jobType == "function" then
+				(job :: any)()
+			elseif jobType == "table" and type((job :: any).Destroy) == "function" then
+				(job :: any):Destroy()
+			elseif jobType == "Instance" then
+				(job :: any):Destroy()
+			elseif jobType == "thread" then
+				local cancelled
+				if coroutine.running() ~= job then
+					cancelled = pcall(function()
+						task.cancel(job)
+					end)
+				end
 
-			if not cancelled then
-				local toCancel = job
-				task.defer(function()
-					task.cancel(toCancel)
-				end)
+				if not cancelled then
+					local toCancel = job
+					task.defer(function()
+						task.cancel(toCancel)
+					end)
+				end
+			elseif jobType == "RBXScriptConnection" then
+				(job :: any):Disconnect()
 			end
-		elseif jobType == "RBXScriptConnection" then
-			job:Disconnect()
 		end
-		index, job = next(tasks)
 	end
 end
 

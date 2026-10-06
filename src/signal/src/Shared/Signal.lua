@@ -88,6 +88,8 @@ export type Connection<T...> = typeof(setmetatable(
 	{} :: {
 		_signal: Signal<T...>?,
 		_fn: SignalHandler<T...>?,
+		_next: Connection<T...>?,
+		_prev: (Connection<T...> | false)?,
 	},
 	{} :: typeof({ __index = Connection })
 ))
@@ -134,24 +136,28 @@ function Connection.Disconnect<T...>(self: Connection<T...>)
 	-- keeping the signal alive. This means a `Maid` could keep full object trees alive if a
 	-- connection was made to them.
 
+	-- The list is doubly linked so unhooking is O(1). Walking from the head to find the
+	-- previous node made disconnecting n connections oldest-first (the order a Maid cleans in) O(n^2).
+	-- Writes don't need rawset: Connection has no __newindex. Reads do, since missing members error.
+	local ourPrev = rawget(self :: any, "_prev")
 	local ourNext = rawget(self :: any, "_next")
 
-	if signal._handlerListHead == self then
-		signal._handlerListHead = ourNext or false
+	if ourPrev then
+		ourPrev._next = ourNext
 	else
-		local prev = signal._handlerListHead
-		while prev and rawget(prev, "_next") ~= self do
-			prev = rawget(prev, "_next")
-		end
-		if prev then
-			assert(rawget(prev, "_next") == self, "Bad state")
-			rawset(prev, "_next", ourNext)
-		end
+		signal._handlerListHead = ourNext or false
+	end
+
+	if ourNext then
+		ourNext._prev = ourPrev
 	end
 
 	-- Clear all member variables that aren't _next so keeping a connection
-	-- indexed allows for GC of other components
-	table.clear(self :: any)
+	-- indexed allows for GC of other components. _next is kept so a Fire() that is
+	-- currently on this node can still continue to the rest of the list.
+	self._signal = nil
+	self._fn = nil
+	self._prev = nil
 end
 
 --[=[
@@ -211,13 +217,22 @@ end
 	@return RBXScriptConnection
 ]=]
 function Signal.Connect<T...>(self: Signal<T...>, fn: SignalHandler<T...>): Connection<T...>
-	local connection = Connection.new(self, fn)
-	if self._handlerListHead then
-		rawset(connection :: any, "_next", self._handlerListHead)
-		self._handlerListHead = connection
+	local head: any = self._handlerListHead
+	local connection: any
+	if head then
+		-- Create with the link fields up front rather than adding them afterwards, which is slower.
+		-- The first connection on a signal stays small, as most signals only have one.
+		connection = setmetatable({
+			_signal = self,
+			_fn = fn,
+			_next = head,
+			_prev = false,
+		}, Connection)
+		head._prev = connection
 	else
-		self._handlerListHead = connection
+		connection = Connection.new(self, fn)
 	end
+	self._handlerListHead = connection
 	return connection
 end
 
