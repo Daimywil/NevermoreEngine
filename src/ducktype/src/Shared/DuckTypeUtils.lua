@@ -15,8 +15,6 @@ local DuckTypeUtils = {}
 	@return boolean
 ]=]
 function DuckTypeUtils.isImplementation(template: any, target: any): boolean
-	assert(type(template) == "table", "Bad template")
-
 	return type(target) == "table"
 		and (getmetatable(target) == template or DuckTypeUtils._checkInterface(template, target))
 end
