@@ -21,28 +21,26 @@ local RxStateStackUtils = {}
 function RxStateStackUtils.topOfStack<T>(defaultValue: T?): Observable.Transformer<(Brio.Brio<T>), (T)>
 	return function(source)
 		return Observable.new(function(sub)
-			local maid = Maid.new()
-			local current = maid:Add(StateStack.new(defaultValue))
+			local stateStack = StateStack.new(defaultValue)
 
-			maid:GiveTask(source:Subscribe(function(brio)
-				if not Brio.isBrio(brio) then
-					warn("[RxStateStackUtils.topOfStack] - Not a brio. Ignoring.")
-					return
-				end
-
+			local subscription = source:Subscribe(function(brio)
 				if not brio:IsDead() then
-					brio:ToMaid():GiveTask(current:PushState(brio:GetValue()))
+					brio:ToMaid():GiveTask(stateStack:PushState(brio:GetValue()))
 				end
-			end))
+			end)
 
 			local function update()
-				sub:Fire(current:GetState())
+				sub:Fire(stateStack:GetState())
 			end
 
-			maid:GiveTask(current.Changed:Connect(update))
+			local connection = stateStack.Changed:Connect(update)
+
 			update()
 
-			return maid
+			return function()
+				connection:Disconnect()
+				subscription:Destroy()
+			end
 		end) :: any
 	end
 end
