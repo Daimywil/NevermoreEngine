@@ -83,14 +83,15 @@ function RxBrioUtils.completeOnDeath<T...>(
 			return
 		end
 
-		local maid = brio:ToMaid()
-
-		maid:GiveTask(function()
+		local connection = brio:GetDiedSignal():Connect(function()
 			sub:Complete()
 		end)
-		maid:GiveTask(observable:Subscribe(sub:GetFireFailComplete()))
+		local subscription = observable:Subscribe(sub:GetFireFailComplete())
 
-		return maid
+		return function()
+			connection:Disconnect()
+			subscription:Destroy()
+		end
 	end)
 end
 
