@@ -326,9 +326,7 @@ end
 function RxBrioUtils.where<T>(predicate: Rx.Predicate<T>)
 	return function(source)
 		return Observable.new(function(sub)
-			local maid = Maid.new()
-
-			maid:GiveTask(source:Subscribe(function(brio)
+			return source:Subscribe(function(brio)
 				if brio:IsDead() then
 					return
 				end
@@ -336,9 +334,7 @@ function RxBrioUtils.where<T>(predicate: Rx.Predicate<T>)
 				if predicate(brio:GetValue()) then
 					sub:Fire(brio)
 				end
-			end, sub:GetFailComplete()))
-
-			return maid
+			end, sub:GetFailComplete())
 		end)
 	end
 end

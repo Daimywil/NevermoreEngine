@@ -137,15 +137,21 @@ function ObservableMap._observeKeyValueChanged<TKey, TValue>(
 	packValue: (TKey, TValue) -> any
 ): Observable.Observable<Brio.Brio<(TKey, TValue)>>
 	return Observable.new(function(sub)
-		local maid = Maid.new()
+		local brios: { [TKey]: any } = {}
 
 		local function handleValue(key: TKey, value: TValue?, _oldValue: TValue?)
+			local oldBrio = brios[key]
+
 			if value ~= nil then
 				local brio = packValue(key, value)
-				maid[key :: any] = brio
+				brios[key] = brio
+				if oldBrio then
+					oldBrio:Destroy()
+				end
 				sub:Fire(brio)
-			else
-				maid[key :: any] = nil
+			elseif oldBrio then
+				brios[key] = nil
+				oldBrio:Destroy()
 			end
 		end
 
@@ -159,7 +165,12 @@ function ObservableMap._observeKeyValueChanged<TKey, TValue>(
 			self._maid[sub] = nil
 			conn:Disconnect()
 			sub:Complete()
-			maid:Destroy()
+
+			-- Clear each slot before killing so re-entrant cleanup can't kill a brio twice
+			for key, brio in brios do
+				brios[key] = nil
+				brio:Destroy()
+			end
 		end
 		self._maid[sub] = cleanup
 		return cleanup
