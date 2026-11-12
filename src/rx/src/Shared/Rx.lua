@@ -64,36 +64,10 @@ local Rx = {
 	@return (source: Observable<T>) -> Observable<U>
 ]=]
 function Rx.pipe(transformers)
-	assert(type(transformers) == "table", "Bad transformers")
-	for index, transformer in transformers do
-		if type(transformer) ~= "function" then
-			error(
-				string.format(
-					"[Rx.pipe] Bad pipe value of type %q at index %q, expected function",
-					type(transformer),
-					tostring(index)
-				)
-			)
-		end
-	end
-
 	return function(source)
-		assert(source, "Bad source")
-
 		local current = source
 		for key, transformer in transformers do
 			current = transformer(current)
-
-			if not (type(current) == "table" and current.ClassName == "Observable") then
-				error(
-					string.format(
-						"[Rx.pipe] - Failed to transform %q in pipe, made %q (%s)",
-						tostring(key),
-						tostring(current),
-						tostring(type(current) == "table" and current.ClassName or "")
-					)
-				)
-			end
 		end
 
 		return current
@@ -168,8 +142,6 @@ function Rx.toPromise<T...>(
 	observable: Observable.Observable<T...>,
 	cancelToken: CancelToken.CancelToken?
 ): Promise.Promise<T...>
-	assert(Observable.isObservable(observable), "Bad observable")
-
 	local maid = Maid.new()
 
 	local newCancelToken = CancelToken.new(function(cancel)
@@ -265,8 +237,6 @@ end
 	@return Observable<T>
 ]=]
 function Rx.fromPromise<T...>(promise: Promise.Promise<T...>): Observable.Observable<T...>
-	assert(Promise.isPromise(promise), "Bad promise")
-
 	return Observable.new(function(sub)
 		-- Save a task.spawn call
 		if not promise:IsPending() then
@@ -343,8 +313,6 @@ end
 ]=]
 function Rx.start<T...>(callback: () -> T...): Observable.Transformer<T..., T...>
 	return function(source)
-		assert(Observable.isObservable(source), "Bad observable")
-
 		return Observable.new(function(sub)
 			sub:Fire(callback())
 
@@ -399,8 +367,6 @@ function Rx.share<T...>(): Observable.Transformer<T..., T...>
 			lastComplete = UNSET_VALUE
 		end
 
-		assert(Observable.isObservable(source), "Bad observable")
-
 		return Observable.new(function(sub)
 			if lastFail ~= UNSET_VALUE then
 				sub:Fail(table.unpack(lastFail, 1, lastFail.n))
@@ -437,9 +403,6 @@ end
 	@return (source: Observable) -> Observable
 ]=]
 function Rx.shareReplay<T...>(bufferSize: number?, windowTimeSeconds: number?): Observable.Transformer<T..., T...>
-	assert(type(bufferSize) == "number" or bufferSize == nil, "Bad bufferSize")
-	assert(type(windowTimeSeconds) == "number" or windowTimeSeconds == nil, "Bad windowTimeSeconds")
-
 	local maxBufferSize = bufferSize or math.huge
 	local windowTime = windowTimeSeconds or math.huge
 
@@ -541,8 +504,6 @@ function Rx.shareReplay<T...>(bufferSize: number?, windowTimeSeconds: number?): 
 			lastComplete = UNSET_VALUE
 		end
 
-		assert(Observable.isObservable(source), "Bad observable")
-
 		return Observable.new(function(sub)
 			if lastFail ~= UNSET_VALUE then
 				sub:Fail(table.unpack(lastFail, 1, lastFail.n))
@@ -593,11 +554,7 @@ end
 	@return (source: Observable) -> Observable
 ]=]
 function Rx.startFrom<T, U>(callback: () -> { U }): Observable.Transformer<(T), (U | T)>
-	assert(type(callback) == "function", "Bad callback")
-
 	return function(source)
-		assert(Observable.isObservable(source), "Bad observable")
-
 		return Observable.new(function(sub)
 			for _, value in callback() do
 				sub:Fire(value)
@@ -641,11 +598,7 @@ end
 	@return (source: Observable) -> Observable
 ]=]
 function Rx.scan<T, U...>(accumulator: (T?, U...) -> T, seed: T?): Observable.Transformer<(U...), (T)>
-	assert(type(accumulator) == "function", "Bad accumulator")
-
 	return function(source)
-		assert(Observable.isObservable(source), "Bad observable")
-
 		return Observable.new(function(sub)
 			local current: T? = seed
 
@@ -671,11 +624,7 @@ end
 	@return (source: Observable) -> Observable
 ]=]
 function Rx.reduce(reducer, seed)
-	assert(type(reducer) == "function", "Bad reducer")
-
 	return function(source)
-		assert(Observable.isObservable(source), "Bad observable")
-
 		return Observable.new(function(sub)
 			local maid = Maid.new()
 			local current = seed
@@ -769,8 +718,6 @@ Rx.defaultsToNil = Rx.defaultsTo(nil)
 ]=]
 function Rx.endWith(values)
 	return function(source)
-		assert(Observable.isObservable(source), "Bad observable")
-
 		return Observable.new(function(sub)
 			local maid = Maid.new()
 
@@ -858,8 +805,6 @@ end
 function Rx.mapTo(...)
 	local args = table.pack(...)
 	return function(source)
-		assert(Observable.isObservable(source), "Bad observable")
-
 		return Observable.new(function(sub)
 			return source:Subscribe(function()
 				sub:Fire(table.unpack(args, 1, args.n))
@@ -1192,11 +1137,7 @@ function Rx.switchMap<T..., U...>(project: (T...) -> Observable.Observable<U...>
 end
 
 function Rx.takeUntil(notifier)
-	assert(Observable.isObservable(notifier))
-
 	return function(source)
-		assert(Observable.isObservable(source), "Bad observable")
-
 		return Observable.new(function(sub)
 			local maid = Maid.new()
 			local cancelled = false
@@ -1253,8 +1194,6 @@ end
 	@return Observable<T>
 ]=]
 function Rx.unpacked(observable)
-	assert(Observable.isObservable(observable), "Bad observable")
-
 	return Observable.new(function(sub)
 		return observable:Subscribe(function(value)
 			if type(value) == "table" then
@@ -1285,11 +1224,7 @@ end
 	@return (source: Observable<T>) -> Observable<T>
 ]=]
 function Rx.finalize(finalizerCallback)
-	assert(type(finalizerCallback) == "function", "Bad finalizerCallback")
-
 	return function(source)
-		assert(Observable.isObservable(source), "Bad observable")
-
 		return Observable.new(function(sub)
 			local maid = Maid.new()
 
@@ -1313,8 +1248,6 @@ end
 ]=]
 function Rx.combineLatestAll()
 	return function(source)
-		assert(Observable.isObservable(source), "Bad observable")
-
 		return Observable.new(function(sub)
 			local observables = {}
 			local maid = Maid.new()
@@ -1325,8 +1258,6 @@ function Rx.combineLatestAll()
 			end)
 
 			maid:GiveTask(source:Subscribe(function(value)
-				assert(Observable.isObservable(value))
-
 				table.insert(observables, value)
 			end, function(...)
 				sub:Fail(...)
@@ -1367,11 +1298,7 @@ Rx.combineAll = Rx.combineLatestAll
 	@return (source: Observable<T>) -> Observable<T | TErrorResult>
 ]=]
 function Rx.catchError(callback)
-	assert(type(callback) == "function", "Bad callback")
-
 	return function(source)
-		assert(Observable.isObservable(source), "Bad observable")
-
 		return Observable.new(function(sub)
 			local maid = Maid.new()
 
@@ -1393,7 +1320,6 @@ function Rx.catchError(callback)
 				-- at this point, we can only have one error, so we need to subscribe to the result
 				-- and continue the observiable
 				local observable = callback(...)
-				assert(Observable.isObservable(observable), "Bad observable")
 
 				maid:GiveTask(observable:Subscribe(sub:GetFireFailComplete()))
 			end, function()
@@ -1508,8 +1434,6 @@ end
 	@return Observable<{ [TKey]: TEmitted }>
 ]=]
 function Rx.combineLatestDefer(observables)
-	assert(type(observables) == "table", "Bad observables")
-
 	return Observable.new(function(sub)
 		local pending = 0
 		local unset = 0
@@ -1603,7 +1527,6 @@ function Rx.using(resourceFactory, observableFactory)
 		maid:GiveTask(resource)
 
 		local observable = observableFactory(resource)
-		assert(Observable.isObservable(observable), "Bad observable")
 
 		maid:GiveTask(observable:Subscribe(sub:GetFireFailComplete()))
 
@@ -1633,12 +1556,7 @@ end
 	@return (source: Observable<T>) -> Observable<T>
 ]=]
 function Rx.take<T...>(number: number): Observable.Transformer<T..., T...>
-	assert(type(number) == "number", "Bad number")
-	assert(number > 0, "Bad number")
-
 	return function(source)
-		assert(Observable.isObservable(source), "Bad observable")
-
 		return Observable.new(function(sub)
 			local taken = 0
 			local maid = Maid.new()
@@ -1673,12 +1591,7 @@ end
 	@return (source: Observable<T>) -> Observable<T>
 ]=]
 function Rx.skip<T...>(toSkip: number): Observable.Transformer<T..., T...>
-	assert(type(toSkip) == "number", "Bad toSkip")
-	assert(toSkip > 0, "Bad toSkip")
-
 	return function(source)
-		assert(Observable.isObservable(source), "Bad observable")
-
 		return Observable.new(function(sub)
 			local skipped = 0
 			local maid = Maid.new()
@@ -1735,11 +1648,7 @@ end
 	@return (source: Observable<T>) -> Observable<T>
 ]=]
 function Rx.delay<T...>(seconds: number): Observable.Transformer<T..., T...>
-	assert(type(seconds) == "number", "Bad seconds")
-
 	return function(source)
-		assert(Observable.isObservable(source), "Bad observable")
-
 		return Observable.new(function(sub: Subscription.Subscription<T...>)
 			local maid = Maid.new()
 
@@ -1764,8 +1673,6 @@ end
 	@return Observable<()>
 ]=]
 function Rx.delayed(seconds: number)
-	assert(type(seconds) == "number", "Bad seconds")
-
 	return Observable.new(function(sub)
 		return task.delay(seconds, function()
 			sub:Fire()
@@ -1781,9 +1688,6 @@ end
 	@return (source: Observable<number>) -> Observable<number>
 ]=]
 function Rx.timer(initialDelaySeconds: number, seconds: number)
-	assert(type(initialDelaySeconds) == "number" or initialDelaySeconds == nil, "Bad initialDelaySeconds")
-	assert(type(seconds) == "number", "Bad seconds")
-
 	return Observable.new(function(sub)
 		local number = -1
 
@@ -1821,15 +1725,7 @@ end
 	@return (source: Observable<T>) -> Observable<{T, ...TInput}>
 ]=]
 function Rx.withLatestFrom(inputObservables)
-	assert(inputObservables, "Bad inputObservables")
-
-	for _, observable in inputObservables do
-		assert(Observable.isObservable(observable), "Bad observable")
-	end
-
 	return function(source)
-		assert(Observable.isObservable(source), "Bad observable")
-
 		return Observable.new(function(sub)
 			local maid = Maid.new()
 
@@ -1872,12 +1768,7 @@ end
 	@return (source: Observable) -> Observable
 ]=]
 function Rx.throttleTime(duration: number, throttleConfig: ThrottledFunction.ThrottleConfig)
-	assert(type(duration) == "number", "Bad duration")
-	assert(type(throttleConfig) == "table" or throttleConfig == nil, "Bad throttleConfig")
-
 	return function(source)
-		assert(Observable.isObservable(source), "Bad observable")
-
 		return Observable.new(function(sub)
 			local maid = Maid.new()
 
@@ -1974,11 +1865,7 @@ end
 	@return (source: Observable<T>) -> Observable<T>
 ]=]
 function Rx.throttle(durationSelector)
-	assert(type(durationSelector) == "function", "Bad durationSelector")
-
 	return function(source)
-		assert(Observable.isObservable(source), "Bad observable")
-
 		return Observable.new(function(sub)
 			local topMaid = Maid.new()
 
@@ -2024,11 +1911,7 @@ end
 	@return (source: Observable) -> Observable
 ]=]
 function Rx.skipUntil(notifier)
-	assert(Observable.isObservable(notifier), "Bad observable")
-
 	return function(source)
-		assert(Observable.isObservable(source), "Bad observable")
-
 		return Observable.new(function(sub)
 			local maid = Maid.new()
 			local taking = false
@@ -2058,11 +1941,7 @@ end
 	@return (source: Observable) -> Observable
 ]=]
 function Rx.skipWhile(predicate)
-	assert(type(predicate) == "function", "Bad predicate")
-
 	return function(source)
-		assert(Observable.isObservable(source), "Bad observable")
-
 		return Observable.new(function(sub)
 			local skipping = true
 			local index = 0
@@ -2090,11 +1969,7 @@ end
 	@return (source: Observable) -> Observable
 ]=]
 function Rx.takeWhile(predicate)
-	assert(type(predicate) == "function", "Bad predicate")
-
 	return function(source)
-		assert(Observable.isObservable(source), "Bad observable")
-
 		return Observable.new(function(sub)
 			local index = 0
 
@@ -2122,8 +1997,6 @@ end
 	@return (source: Observable) -> Observable
 ]=]
 function Rx.switchScan(accumulator, seed)
-	assert(type(accumulator) == "function", "Bad accumulator")
-
 	return Rx.pipe({
 		Rx.scan(accumulator, seed) :: any,
 		Rx.switchAll(),
@@ -2141,8 +2014,6 @@ end
 	@return (source: Observable) -> Observable
 ]=]
 function Rx.mergeScan(accumulator, seed)
-	assert(type(accumulator) == "function", "Bad accumulator")
-
 	return Rx.pipe({
 		Rx.scan(accumulator, seed) :: any,
 		Rx.mergeAll(),
