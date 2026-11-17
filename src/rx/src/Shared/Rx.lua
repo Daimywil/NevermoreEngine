@@ -1955,6 +1955,9 @@ function Rx.skipWhile(predicate)
 				index += 1
 
 				skipping = predicate(index, ...)
+				if not skipping then
+					sub:Fire(...)
+				end
 			end, sub:GetFailComplete())
 		end)
 	end
